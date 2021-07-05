@@ -1,0 +1,3148 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "## About Access Paysuite\nAccess PaySuite is a leading provider of payment solutions to mid-sized UK organisations. Part of The Access Group, it combines payments expertise with unparalleled SaaS experience to help customers across commercial and not for profit sectors improve their payment solutions, providing organisations with the freedom to accelerate their innovation and growth. For more information about Access PaySuite, visit www.accesspaysuite.com\n\nOur Collection Services are based around our Eazy Customer Manager™ application\nwhich manages the Direct Debit process from beginning to end and is connected to a\nrobust and powerful BACS submission engine. The system also provides a range of\nmanagement information via the easy to use secure web interface.\n\n## API Technical Details\n\nThe API is REST based and communication is conducted over a regular\nHTTPS connection. It accepts input in the `x-www-form-urlencoded` format\nwith output being provided in either JSON or XML format as required.\n\nThe output is selected using the `Accept` header including either\n`application/json` or `application/xml`. The API key should be also be\nspecified in the request using the `apiKey` header.\n\nOur API uses four different HTTP methods to indicate the different\noperations being undertaken on the data being manipulated. These are:\n\n|**Method**      | **Operation**\n| -------------- | --------------\n| **HTTP GET**   | Request for information from the server. The server will respond with the data requested.\n| **HTTP POST**  | Request to create a record on the server. The POST request must be accompanied by the relevant data in the body or query string as dictated by the specification below.\n| **HTTP PATCH** | Request to amend (or partially amend) the record on the server.\n| **HTTP DELETE**| A request to remove a record from the server (only available on the client return data endpoint call).\n\n### Example Headers for JSON Mode:\n\n```\nGET https://ecm3.eazycollect.co.uk/api/v3/client/LUISCT/BACS/customer/callback\n\nAccept: application/json\napiKey: xAQdXTPtZPG3QqsUJw73wx1o\nContent-Type: application/json\n```\n\n## The Direct Debit Process\n\nThroughout the development of our API we have sought to simplify the\nDirect Debit process as much as possible, however due to the technical\nnature of Direct Debits it is helpful to understand the general data\nflow and the reasons for certain time delays.\n\n1. After creating a ‘Customer’ record on our system, you will need to\nassign a ‘schedule’ to them. The schedule can take a number of forms:\n    - A schedule that can collect ad-hoc payments as and when you\n      request them via the API. There will usually be date\n      restrictions in place.\n    - A schedule where you ask us to collect regular amounts on\n      regular dates in a month, or days in a week as per your requirements.\n    - A schedule where a pre-determined amount is taken on regular\n      dates in a month, or days in a week as per your instructions.\n    - A schedule where the collection amounts and or dates are fixed.\n\n    Access Paysuite creates the schedules as part of the set-up process and\n    the available schedules can be listed by using the ‘schedules’ call.\n\n2. As soon as a schedule is applied to a customer record, we send an\ninstruction to BACS to create the Direct Debit instruction. The date\nfor the first payment required should be set <u>at least</u> 10 working\ndays after the schedule creation date.\n\n3. Ad-hoc payments need to be lodged onto the *Eazy Customer Manager™*\n<u>at least</u> 5 working days before the collection date.\n\n4. Around three working days before the collection date, we submit the\npayments to BACS for collection. Payments cannot be changed after\nsubmission has occurred.\n\n5. The final status of the payment records can be enquired upon 3\nworking days following the collection date. Where a payment\ncollection date falls on a weekend or a non UK banking day, the\ncollection date is automatically moved to the next working day, and\nthe developer will need to take this into account. (e.g.: A payment\nscheduled on Saturday, 1st June 2013 will be collected on Monday\n3rd June 2013. Payment statuses will be available from Thursday\n6th June 2013.)\n\n## A note on Working Days\n\nWe ask that our clients allow an **absolute minimum** of 10 working days\nbetween creating a customer and contract and collecting the first\npayment. Payments for existing contracts must be submitted and confirmed\nby 8pm 5 working days before the collection date for existing customers\nwith an active Direct Debit.\n\nWe <u>strongly recommend</u> that customers are created and payments uploaded\n<u>1 -2 days in advance</u> of these cut off times as these deadlines leave\n**no** contingency to problem solve any issues that arise which could\nlead to payments being missed.\n\n**It is important to note** that if a collection date falls on a weekend\nor a bank holiday, then the 10 and 5 working day rules start from the\nprevious working day; so for a Saturday or a Sunday, 5/10 working days\nshould be counted back from the previous Friday.\n\n**For example:**\n\n<u>For payments due on Saturday 15/04/2017</u>\n- Payments for existing customers would need to be submitted and\n  confirmed by 8pm on Thursday 06/04/2017.\n- New customers would need to be confirmed by 9pm on Thursday 30/03/2017.\n\n**Note:** 14/04/2017 was Good Friday, a Bank Holiday in the UK and does\nnot count as a banking day.\n\n## Using the API and UI together\n\nEazy Customer Manager provides a useful User Interface (UI) available\nvia your browser which gives access to your customer data and a suite of\nreports.\n\nIf you have chosen to do a “full integration” with your own Customer\nRelationship Management or Accounting software, then it must be borne in\nmind that your software is driving the payment process entirely. In\n“full integration” mode you will be using the API to set up direct\ndebits and send ad-hoc payments as and when collections are required; in\nthis arrangement we generally advise against using the UI other than to\ndownload paid/unpaid reports.\n\nIt is important to note that when using the API in a “full integration”\nthe following anomalies will be present within the UI:\n\n- The account and arrears balances shown in the Access Paysuite UI\n  against each customer will not reflect manual payments made in your\n  CRM/Accounts package unless they are also (double) keyed as manual\n  payments onto the Eazy Customer Manager UI.\n\n- At present, there is no way to automatically “represent” failed\n  payments using the API and therefore our recommendation is to add a\n  new ad-hoc payment to collect any arrears. As these are new and\n  separate transactions, these will increase the total contract\n  balance, but will not affect the arrears balance which will remain\n  unless they are manually cleared via the UI.\n\n- As a result of the above, the arrears report provided within the UI\n  will be incorrect and should not be relied upon. Arrears and\n  contracts balances should be drawn from your own software unless you\n  have keyed any manual payments and written off unpaid transactions\n  that have been represented via the UI.\n\nIf you require any further assistance with using the API and UI\ntogether, please contact the IT Helpdesk at help@eazycollect.co.uk\n\n## Errors\n\nThe API uses standard HTTP status codes to indicate the success or failure\nof an API call. The error body provided will be either JSON or XML format \nper the preference included within the headers. Due to the complexity of the \nAPI and the Direct Debit Scheme, we are unable to provide a definitive list \nof all the  errors that the system may generate, however we have attempted \nto make the errors generated as clear as possible – i.e. Plain English. \nWe also recommend using the panels on the right hand side to get aquainted\nwith the HTTP status codes the API may return. \n\n**Examples:**\n\n**JSON:**\n```json\n{\n    \"Message\": \"The requested resource does not support http method 'POST'.\"\n}\n```\n\n**XML:**\n```xml\n<Error>\n    <Message>The requested resource does not support http method 'POST'.</Message>\n</Error>\n```\n    \n## Environments\nWe offer two environments to developers, `sandbox` and `ecm3`. Our `sandbox` environment is designed\nfor all your testing needs. Our `ecm3` environment is our production environment and we strongly\nrecommend using the `sandbox` environment to get acquainted with how the API functions and returns\ndata. If you would like access to our `sandbox` environment, please contact our sales team at `sales@eazycollect.co.uk`. \n\nThe two environments behave identically, with the only difference being how you would access an environment. All requests to our production environment would go through `ecm3.eazycollect.co.uk` whereas requests for our sandbox environment would go through `sandbox.eazycollect.co.uk`.\n\n## SDKs\nTo help improve speed and reliability when integrating into the EazyCustomerManager product, we have created open-sourced, MIT licensed SDKs for Python, C# and Java for our developers to use. You can view the documentation for all three below\n\n- [Python](https://github.com/EazyCollectServices/EazyCollectSDK-Python)\n- [C#](https://github.com/EazyCollectServices/EazyCollectSDK-Dotnet)\n- [Java](https://github.com/EazyCollectServices/EazyCollectSDK-Java)\n\nAll three SDKs are free to use and no additional setup is required to begin using them. All code examples in this document will provide examples based on the above SDKs. \n\nThere are currently no plans to bring the SDKs to additional languages, though that may change in the future.\n\n  contact:\nemail: help@eazycollect.co.uk\n",
+    "license": {
+      "name": "MIT",
+      "url": "https://github.com/EazyCollectServices/EazyCollectAPIv3/blob/master/LICENSE"
+    },
+    "title": "Access Paysuite",
+    "version": "3.0.0",
+    "x-logo": {
+      "backgroundColor": "#4b112c",
+      "url": "https://www.accesspaysuite.com/media/iwwhai0a/paysuite-logo.png"
+    }
+  },
+  "host": "ecm3.eazycollect.co.uk",
+  "basePath": "/api/v3",
+  "schemes": [
+    "https"
+  ],
+  "paths": {
+    "/client/{clientCode}/BACS/{entity}/callback": {
+      "delete": {
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The entity for which to receive callback BACS messages.",
+            "enum": [
+              "customer",
+              "contract",
+              "payment"
+            ],
+            "in": "path",
+            "name": "entity",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "Message": "Callback URL cleared."
+                  },
+                  "type": "string"
+                }
+              },
+              "application/xml": "<GeneralAcknowledgement\n  xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Callback URL cleared.</Message>\n</GeneralAcknowledgement>"
+            }
+          }
+        },
+        "tags": [
+          "Return Endpoints"
+        ],
+        "description": "Clears the set callback URL for the specified entity.",
+        "summary": "Clears the set callback URL for the given return endpoint",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "source": "var delete = new Delete(settings); string request = delete.CallbackUrl(\"contract\");\n"
+          },
+          {
+            "lang": "Python",
+            "source": "client = eazysdk.EazySDK() request = client.delete.callback_url(\"contract\")\n"
+          },
+          {
+            "lang": "Java",
+            "source": "Delete delete = new Delete(settings); String request = delete.callbackUrl(\"contract\");\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" --request DELETE \"https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/BACS/{entity}/callback\"\n"
+          }
+        ]
+      },
+      "get": {
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The entity for which to receive callback BACS messages.",
+            "enum": [
+              "customer",
+              "contract",
+              "payment"
+            ],
+            "in": "path",
+            "name": "entity",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "Message": "https://my.website.com/webhook"
+              },
+              "application/xml": "<GeneralAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><Message>https://my.website.com/webhook</Message></GeneralAcknowledgement>\n  "
+            }
+          },
+          "401": {
+            "description": "Unauthorised - API not enabled or API key incorrect",
+            "examples": {
+              "application/json": {
+                "Message": "API not enabled"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\n    xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><Message>API\n    not enabled</Message><ErrorCode>7</ErrorCode></ErrorAcknowledgement>"
+            }
+          },
+          "404": {
+            "description": "Not found - Client code incorrect",
+            "examples": {
+              "application/json": {
+                "ErrorCode": 7,
+                "Message": "API not enabled"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><Message>API\n  not enabled</Message><ErrorCode>7</ErrorCode></ErrorAcknowledgement>"
+            }
+          },
+          "405": {
+            "description": "API key not provided",
+            "examples": {
+              "application/json": {
+                "Message": "The requested resource does not support http method 'POST'."
+              },
+              "application/xml": "<Error><Message>The requested resource does not support http method 'POST'.</Message></Error>"
+            }
+          }
+        },
+        "tags": [
+          "Return Endpoints"
+        ],
+        "description": "Returns the assigned callback URL for the specified entity.",
+        "summary": "Get the callback URL for the given return endpoint",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "source": "var get = new Get(settings); string response = get.CallbackUrl(\"contract\");\n"
+          },
+          {
+            "lang": "Python",
+            "source": "client = eazysdk.EazySDK() response = client.get.callback_url(\"contract\")\n"
+          },
+          {
+            "lang": "Java",
+            "source": "Get get = new Get(settings); String response = get.callbackUrl(\"contract\");\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" \"https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/BACS/{entity}/callback\"\n"
+          }
+        ]
+      },
+      "post": {
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The entity for which to receive callback BACS messages.",
+            "enum": [
+              "customer",
+              "contract",
+              "payment"
+            ],
+            "in": "path",
+            "name": "entity",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "New value for the callback URL.",
+            "format": "url",
+            "in": "query",
+            "name": "url",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "Message": "Callback URL assigned."
+              },
+              "application/xml": "<GeneralAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><Message>Callback\n  URL assigned.</Message></GeneralAcknowledgement>"
+            }
+          }
+        },
+        "tags": [
+          "Return Endpoints"
+        ],
+        "description": "Sets the callback URL for the specified entity.",
+        "summary": "Sets the callback URL for the given return endpoint",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "source": "var post = new Post(settings); string request = post.CallbackUrl(\"contract\", \"https://my.website.com/webhook\");\n"
+          },
+          {
+            "lang": "Python",
+            "source": "client = eazysdk.EazySDK() request = client.post.callback_url(entity=\"contract\", callback_url=\"https://my.website.com/webhook\")\n"
+          },
+          {
+            "lang": "Java",
+            "source": "Post post = new Post(settings); String request = post.callbackUrl(\"contract\", \"https://my.website.com/webhook\");\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" --request POST https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/BACS/{entity}/callback?url=https://my.website.com/webhook\n"
+          }
+        ]
+      }
+    },
+    "/client/{clientCode}/bulk/payments": {
+      "post": {
+        "consumes": [
+          "application/json",
+          "application/xml"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Payments should be submitted in the body of the POST request in the format\ndetailed below.\n",
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "example": {
+                "Payments": [
+                  {
+                    "amount": 1.1,
+                    "comment": "Up to 256 characters, optional",
+                    "contract": "GUID",
+                    "date": "YYYY-MM-DDT00:00:00.000",
+                    "isCredit": false
+                  },
+                  {
+                    "amount": 1.1,
+                    "comment": "Up to 256 characters, optional",
+                    "contract": "GUID",
+                    "date": "YYYY-MM-DDT00:00:00.000",
+                    "isCredit": false
+                  }
+                ]
+              },
+              "properties": {
+                "Payments": {
+                  "items": {
+                    "properties": {
+                      "amount": {
+                        "description": "The amount to be collected.",
+                        "multipleOf": 0.01,
+                        "type": "number"
+                      },
+                      "comment": {
+                        "description": "A comment relating to the payment (which can be recalled using\nthe GET method).\n",
+                        "maxLength": 255,
+                        "type": "string"
+                      },
+                      "contract": {
+                        "description": "The contract GUID that you wish to collect a payment against.",
+                        "format": "guid",
+                        "type": "string"
+                      },
+                      "date": {
+                        "description": "The date on which the payment should be collected.\nThis **must** be at least 5 **working** days in the future,\non a permitted date and not before the start date set when\ncreating the contract.\n**Format: `YYYY-MM-DDT00:00:00.000`**\n",
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "isCredit": {
+                        "description": "If you have an own SUN and you have agreed by prior arrangement\nwith your account manager that you may issue credits, pass\n`true` with this parameter to issue a credit to the customer.\nIf omitted, this will be a debit.\n",
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "amount",
+                      "contract",
+                      "date"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "FailureCount": 0,
+                "Failures": [],
+                "IsSuccessfull": true,
+                "Message": "All payments are in queue for process"
+              },
+              "application/xml": "<BulkPaymentAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Failures></Failures>\n    <FailureCount>0</FailureCount>\n    <IsSuccessfull>true</IsSuccessfull>\n    <Message>All payments are in queue for process</Message>\n</BulkPaymentAcknowledgement>\n"
+            }
+          },
+          "400": {
+            "description": "Bad request - no payments",
+            "examples": {
+              "application/json": {
+                "Message": "No payments found in request"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>No payments found in request</Message>\n</ErrorAcknowledgement>\n"
+            }
+          }
+        },
+        "tags": [
+          "Bulk Adding Payments"
+        ],
+        "summary": "Adds a payment to the database to the contract specified in the URL.",
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "sample": "curl -H \"apiKey: {apiKey}\" -H \"Content-Type: application/json\" -d\n\"{'Payments':[{'contract':'1802e1dd-a657-428c-b8d0-ba162fc76203','amount':9.99,'date':'2019-08-01T00:00:00.000','comment':'New\npayment','isCredit':false}]}\"\nhttps://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/bulk/payments\n"
+          }
+        ]
+      }
+    },
+    "/client/{clientCode}/contract/{contractId}/amount": {
+      "patch": {
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The contract GUID that you wish to amend.",
+            "format": "guid",
+            "in": "path",
+            "name": "contractId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The new amount to be taken.",
+            "in": "query",
+            "multipleOf": 0.01,
+            "name": "amount",
+            "required": true,
+            "type": "number"
+          },
+          {
+            "description": "A comment to explain the reason for the change of amount.",
+            "in": "query",
+            "maxLength": 255,
+            "name": "comment",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "Message": "Contract updated"
+              },
+              "application/xml": "<GeneralAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract updated</Message>\n</GeneralAcknowledgement>\n"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "examples": {
+              "application/json": {
+                "Detail": "Amount should be different than old contract amount",
+                "ErrorCode": 3,
+                "Message": "Validation error"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Validation error</Message>\n    <ErrorCode>3</ErrorCode>\n    <Detail>Amount should be different than old contract amount</Detail>\n</ErrorAcknowledgement>\n"
+            }
+          }
+        },
+        "tags": [
+          "Contract Amendment"
+        ],
+        "description": "Amends an existing contract amount in the database.",
+        "summary": "Changing the Amount",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "name": "C# (EazySDK)",
+            "source": "var patch = new Patch(settings);\nstring request = patch.ContractAmount(\"1802e1dd-a657-428c-b8d0-ba162fc76203\", \"9.99\", \"Change contract amount\");\n"
+          },
+          {
+            "lang": "Python",
+            "name": "Python (EazySDK)",
+            "source": "client = eazysdk.EazySDK()\nrequest = client.patch.contract_amount('36bb4f4f-9a7f-4ead-82dc-9295c6fb9e8b', 10.50,\n'A comment')\n"
+          },
+          {
+            "lang": "Java",
+            "name": "Java (EazySDK)",
+            "source": "Patch patch = new Patch(settings);\nString request = patch.contractAmount(\"1802e1dd-a657-428c-b8d0-ba162fc76203\", \"9.99\", \"Change contract amount\");\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" --request PATCH \"https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/contract/{contractId}/amount?amount=9.99&comment=Change%20contract%20amount\"\n"
+          }
+        ]
+      }
+    },
+    "/client/{clientCode}/contract/{contractId}/annual": {
+      "patch": {
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The contract GUID that you wish to amend.",
+            "format": "guid",
+            "in": "path",
+            "name": "contractId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The new day of the month on which payments are to be taken.\n**NOTE:** *You may not* select days `29`, `30` or `31` of the month;\nif you wish to select the last day of the month; pass the string\n`Last day of the Month`.\nPayments will be collected on the next available instance of the payment\nday, which will be a **minimum** of 5 working days in the future.  Any\npayment already scheduled in the next 5 working days *will still be\ncollected*.\n",
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26",
+              "27",
+              "28",
+              "Last Day of the Month"
+            ],
+            "in": "query",
+            "name": "monthDay",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The new month in the year on which the payments are to be taken.",
+            "in": "query",
+            "maximum": 12,
+            "minimum": 1,
+            "name": "month",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "description": "A comment to explain the reason for the change of day.",
+            "in": "query",
+            "maxLength": 255,
+            "name": "comment",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "If you wish to take the next payment to be a different amount (e.g.\npro rata because the number of days between payments will deb different)\nthen pass the amount using this parameter. Ensure that `patchNextPayment`\nis set to `true` if you are using this.\n",
+            "in": "query",
+            "multipleOf": 0.01,
+            "name": "nextPaymentPatchAmount",
+            "type": "number"
+          },
+          {
+            "description": "Set to `true` if using `nextPaymentPatchAmount` or `false` if not.\n",
+            "in": "query",
+            "name": "patchNextPayment",
+            "required": true,
+            "type": "boolean"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "Message": "Contract updated"
+              },
+              "application/xml": "<GeneralAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract updated</Message>\n</GeneralAcknowledgement>\n"
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid day",
+            "examples": {
+              "application/json": {
+                "Message": "Month day is invalid for this contract"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Month day is invalid for this contract</Message>\n</ErrorAcknowledgement>\n"
+            }
+          }
+        },
+        "tags": [
+          "Contract Amendment"
+        ],
+        "description": "Amends an existing contract payment date in the database.",
+        "summary": "Changing the Date (Annual Schedules)",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "name": "C# (EazySDK)",
+            "source": "var patch = new Patch(settings);\nstring request = patch.ContractDayAnnually(\"1802e1dd-a657-428c-b8d0-ba162fc76203\", \"15\", \"1\", \"Change day\", false);\n"
+          },
+          {
+            "lang": "Python",
+            "name": "Python (EazySDK)",
+            "source": "contract_date_annually('36bb4f4f-9a7f-4ead-82dc-9295c6fb9e8b',\n15, 6, 'A comment', False)\n"
+          },
+          {
+            "lang": "Java",
+            "name": "Java (EazySDK)",
+            "source": "Patch patch = new Patch(settings);\nString request = patch.contractDayAnnually(\"1802e1dd-a657-428c-b8d0-ba162fc76203\", \"15\", \"1\", \"Change day\", false);\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" --request PATCH \"https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/contract/{contractId}/annual?monthDay=15&month=1&comment=Change%20day&patchNextPayment=false\"\n"
+          }
+        ]
+      }
+    },
+    "/client/{clientCode}/contract/{contractId}/archive": {
+      "post": {
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The contract GUID that you wish to archive.",
+            "format": "guid",
+            "in": "path",
+            "name": "contractId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "Message": "Contract archived"
+              },
+              "application/xml": "<GeneralAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract archived</Message>\n</GeneralAcknowledgement>\n"
+            }
+          },
+          "403": {
+            "description": "Forbidden - contract is protected",
+            "examples": {
+              "application/json": {
+                "Message": "API not enabled"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>API not enabled</Message>\n</ErrorAcknowledgement>\n"
+            }
+          },
+          "404": {
+            "description": "Contract not found",
+            "examples": {
+              "application/json": {
+                "Message": "Contract not found"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract not found</Message>\n</ErrorAcknowledgement>\n"
+            }
+          }
+        },
+        "tags": [
+          "Archiving a Contract"
+        ],
+        "description": "**NOTE:** It <u>is not</u> possible to “unarchive” a contract once the archive\nprocess has been initiated.\n",
+        "summary": "Cancels the direct debit, writes off any outstanding arrears balance, cancels\nfuture payments and sets the contract status to “archived”.\n",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "name": "C# (EazySDK)",
+            "source": "var post = new Post(settings);\nstring request = post.ArchiveContract(\"1802e1dd-a657-428c-b8d0-ba162fc76203\");\n"
+          },
+          {
+            "lang": "Python",
+            "name": "Python (EazySDK)",
+            "source": "client = eazysdk.EazySDK()\nrequest = client.post.archive_contract('42217d45-cf22-4430-ab02-acc1f8a2d020')\n"
+          },
+          {
+            "lang": "Java",
+            "name": "Java (EazySDK)",
+            "source": "Post post = new Post(settings);\nString request = post.archiveContract(\"1802e1dd-a657-428c-b8d0-ba162fc76203\");\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" --request POST \"https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/contract/{contractId}/archive\"\n"
+          }
+        ]
+      }
+    },
+    "/client/{clientCode}/contract/{contractId}/cancel": {
+      "post": {
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The contract GUID that you wish to cancel the direct debit on.",
+            "format": "guid",
+            "in": "path",
+            "name": "contractId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "Message": "Contract cancelled"
+              },
+              "application/xml": "<GeneralAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract cancelled</Message>\n</GeneralAcknowledgement>\n"
+            }
+          },
+          "403": {
+            "description": "Forbidden - contract is protected",
+            "examples": {
+              "application/json": {
+                "Message": "Contract cannot be accessed"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract cannot be accessed</Message>\n</ErrorAcknowledgement>\n"
+            }
+          },
+          "404": {
+            "description": "Contract not found",
+            "examples": {
+              "application/json": {
+                "Message": "Contract not found"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract not found</Message>\n</ErrorAcknowledgement>\n"
+            }
+          }
+        },
+        "tags": [
+          "Cancelling the Direct Debit (Does not cancel payment creation)"
+        ],
+        "description": "Future payments will be created within our system, but automatically marked\nas unpaid.\n",
+        "summary": "Changes the status of the Direct Debit to “Cancelled”.",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "name": "C# (EazySDK)",
+            "source": "var post = new Post(settings);\nstring request = post.CancelDirectDebit(\"1802e1dd-a657-428c-b8d0-ba162fc76203\");\n"
+          },
+          {
+            "lang": "Python",
+            "name": "Python (EazySDK)",
+            "source": "client = eazysdk.EazySDK()\nrequest = client.post.cancel_direct_debit('42217d45-cf22-4430-ab02-acc1f8a2d020')\n"
+          },
+          {
+            "lang": "Java",
+            "name": "Java (EazySDK)",
+            "source": "Post post = new Post(settings);\nString request = post.cancelDirectDebit(\"1802e1dd-a657-428c-b8d0-ba162fc76203\");\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" --request POST \"https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/contract/{contractId}/cancel\"\n"
+          }
+        ]
+      }
+    },
+    "/client/{clientCode}/contract/{contractId}/monthly": {
+      "patch": {
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The contract GUID that you wish to amend.",
+            "format": "guid",
+            "in": "path",
+            "name": "contractId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The new day of the month on which payments are to be taken.\n**NOTE:** *You may not* select days `29`, `30` or `31` of the month;\nif you wish to select the last day of the month; pass the string\n`Last day of the Month`.\nPayments will be collected on the next available instance of the payment\nday, which will be a **minimum** of 5 working days in the future.  Any\npayment already scheduled in the next 5 working days *will still be\ncollected*.\n",
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26",
+              "27",
+              "28",
+              "Last Day of the Month"
+            ],
+            "in": "query",
+            "name": "monthDay",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "A comment to explain the reason for the change of day.",
+            "in": "query",
+            "maxLength": 255,
+            "name": "comment",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "If you wish to take the next payment to be a different amount (e.g.\npro rata because the number of days between payments will deb different)\nthen pass the amount using this parameter. Ensure that `patchNextPayment`\nis set to `true` if you are using this.\n",
+            "in": "query",
+            "multipleOf": 0.01,
+            "name": "nextPaymentPatchAmount",
+            "type": "number"
+          },
+          {
+            "description": "Set to `true` if using `nextPaymentPatchAmount` or `false` if not.\n",
+            "in": "query",
+            "name": "patchNextPayment",
+            "required": true,
+            "type": "boolean"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "Message": "Contract updated"
+              },
+              "application/xml": "<GeneralAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract updated</Message>\n</GeneralAcknowledgement>\n"
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid day",
+            "examples": {
+              "application/json": {
+                "Message": "Month day is invalid for this contract"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Month day is invalid for this contract</Message>\n</ErrorAcknowledgement>\n"
+            }
+          }
+        },
+        "tags": [
+          "Contract Amendment"
+        ],
+        "description": "Amends an existing contract payment date in the database.",
+        "summary": "Changing the Date (Monthly Schedules)",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "name": "C# (EazySDK)",
+            "source": "var patch = new Patch(settings);\nstring request = patch.ContractDayMonthly(\"1802e1dd-a657-428c-b8d0-ba162fc76203\", \"15\", \"Change day\", false);\n"
+          },
+          {
+            "lang": "Python",
+            "name": "Python (EazySDK)",
+            "source": "client = eazysdk.EazySDK()\nrequest = client.patch.contract_date_monthly('36bb4f4f-9a7f-4ead-82dc-9295c6fb9e8b',\n15, 'A comment', False)\n"
+          },
+          {
+            "lang": "Java",
+            "name": "Java (EazySDK)",
+            "source": "Patch patch = new Patch(settings);\nString request = patch.contractDayMonthly(\"1802e1dd-a657-428c-b8d0-ba162fc76203\", \"15\", \"Change day\", false);\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" --request PATCH \"https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/contract/{contractId}/monthly?day=15&comment=Change%20day&patchNextPayment=false\"\n"
+          }
+        ]
+      }
+    },
+    "/client/{clientCode}/contract/{contractId}/payment": {
+      "get": {
+        "produces": [
+          "application/octet-stream",
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The contract GUID that you wish to query.",
+            "format": "guid",
+            "in": "path",
+            "name": "contractId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The number of payments (rows) you wish to be returned in the response.\n",
+            "in": "query",
+            "maximum": 100,
+            "minimum": 1,
+            "name": "rows",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "Payments": [
+                  {
+                    "Amount": 15.99,
+                    "Comment": "This is a test",
+                    "Date": "2017-05-15T00:00:00.000Z",
+                    "Id": "36bb4f4f-9a7f-4ead-82dc-9295c6fb9e8b",
+                    "IsAdhoc": true,
+                    "IsCredit": false,
+                    "ReasonCode": 0,
+                    "Status": "Pending",
+                    "Type": "BACS"
+                  }
+                ]
+              },
+              "application/xml": "<PaymentsResponse xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Payments>\n        <PaymentDetail>\n            <Id>36bb4f4f-9a7f-4ead-82dc-9295c6fb9e8b</Id>\n            <Status>Pending</Status>\n            <IsCredit>false</IsCredit>\n            <IsAdhoc>true</IsAdhoc>\n            <Amount>15.99</Amount>\n            <Date>2017-05-15T00:00:00</Date>\n            <ReasonCode>0</ReasonCode>\n            <Comment>This is a test</Comment>\n            <Type>BACS</Type>\n        </PaymentDetail>\n    </Payments>\n</PaymentsResponse>\n"
+            },
+            "schema": {
+              "properties": {
+                "Payments": {
+                  "items": {
+                    "$ref": "#/definitions/Payment"
+                  },
+                  "type": "array"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "403": {
+            "description": "Forbidden - contract is protected",
+            "examples": {
+              "application/json": {
+                "Message": "Contract cannot be accessed"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract cannot be accessed</Message>\n</ErrorAcknowledgement>\n"
+            }
+          },
+          "404": {
+            "description": "Contract not found",
+            "examples": {
+              "application/json": {
+                "Message": "Contract not found"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract not found</Message>\n</ErrorAcknowledgement>\n"
+            }
+          }
+        },
+        "tags": [
+          "Adding/Querying Payments"
+        ],
+        "summary": "Queries the database and returns details of payments related to the\nspecified contract.\n",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "name": "C# (EazySDK)",
+            "source": "var get = new Get(settings);\nstring response = get.Payments(\"2b62a358-9a1a-4c71-9450-e419e393dcd1\");\n"
+          },
+          {
+            "lang": "Python",
+            "name": "Python (EazySDK)",
+            "source": "client = eazysdk.EazySDK()\nresponse = client.get.payments('ab09362d-f88e-4ee8-be85-e27e1a6ce06a')\n"
+          },
+          {
+            "lang": "Java",
+            "name": "Java (EazySDK)",
+            "source": "Get get = new Get(settings);\nString response = get.payments(\"2b62a358-9a1a-4c71-9450-e419e393dcd1\");\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" \"https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/contract/{contractId}/payment\"\n"
+          }
+        ]
+      },
+      "post": {
+        "produces": [
+          "application/octet-stream",
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The contract GUID that you wish to query.",
+            "format": "guid",
+            "in": "path",
+            "name": "contractId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The amount to be collected.",
+            "in": "query",
+            "multipleOf": 0.01,
+            "name": "amount",
+            "type": "number"
+          },
+          {
+            "description": "The date on which the payment should be collected.\nThis **must** be at least 5 **working** days in the future, on a permitted\ndate and not before the start date set when creating the contract.\n**Format: `YYYY-MM-DDT00:00:00.000`**\n",
+            "format": "date-time",
+            "in": "query",
+            "name": "date",
+            "type": "string"
+          },
+          {
+            "description": "A comment relating to the payment (which can be recalled using the GET\nmethod).\n",
+            "in": "query",
+            "maxLength": 255,
+            "name": "comment",
+            "type": "string"
+          },
+          {
+            "description": "If you have an own SUN and you have agreed by prior arrangement with your\naccount manager that you may issue credits, pass `true` with this parameter\nto issue a credit to the customer.\n",
+            "in": "query",
+            "name": "isCredit",
+            "type": "boolean"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "Amount": 15.99,
+                "Contract": "b3c17b6f-9ad2-4fa3-9a33-8a8f6813ab1f",
+                "DueDate": "2017-05-15T00:00:00.000Z",
+                "Id": "1b2ac277-5f1f-424a-b55f-323d5bcef8f6"
+              },
+              "application/xml": "<PaymentAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Contract>b3c17b6f-9ad2-4fa3-9a33-8a8f6813ab1f</Contract>\n    <Amount>15.99</Amount>\n    <DueDate>2017-05-15T00:00:00</DueDate>\n    <Id>36bb4f4f-9a7f-4ead-82dc-9295c6fb9e8b</Id>\n</PaymentAcknowledgement>\n"
+            },
+            "schema": {
+              "properties": {
+                "Amount": {
+                  "description": "The amount of the payment.",
+                  "multipleOf": 0.01,
+                  "type": "number"
+                },
+                "Contract": {
+                  "description": "The GUID of the contract to which the payment has been applied.\n",
+                  "format": "guid",
+                  "type": "string"
+                },
+                "DueDate": {
+                  "description": "The due date (date of collection) of the payment.",
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "Error": {
+                  "description": "If any error occurs, a message will appear here.",
+                  "type": "string"
+                },
+                "Id": {
+                  "description": "The GUID of the payment. We suggest that you save this so that you\ncan easily change or query the payment in future. If you are using\npushed return data, this will be included in any payload delivered\nconcerning the payment.\n",
+                  "format": "guid",
+                  "type": "string"
+                },
+                "Message": {
+                  "description": "If any additional message from the system is generated, it will\nappear here (usually null).\n",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid payment amount",
+            "examples": {
+              "application/json": {
+                "Message": "Amount must be greater than zero"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Amount must be greater than zero</Message>\n</ErrorAcknowledgement>\n"
+            }
+          },
+          "403": {
+            "description": "Forbidden - contract is protected",
+            "examples": {
+              "application/json": {
+                "Message": "Contract cannot be accessed"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract cannot be accessed</Message>\n</ErrorAcknowledgement>\n"
+            }
+          },
+          "404": {
+            "description": "Contract not found",
+            "examples": {
+              "application/json": {
+                "Message": "Contract not found"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract not found</Message>\n</ErrorAcknowledgement>\n"
+            }
+          }
+        },
+        "tags": [
+          "Adding/Querying Payments"
+        ],
+        "summary": "Adds a payment to the database to the contract specified in the URL.",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "name": "C# (EazySDK)",
+            "source": "var post = new Post(settings);\nstring request = post.Payment(\"1802e1dd-a657-428c-b8d0-ba162fc76203\", \"10.00\", \"2019-08-01\", \"A comment\");\n"
+          },
+          {
+            "lang": "Python",
+            "name": "Python (EazySDK)",
+            "source": "client = eazysdk.EazySDK()\nrequest = client.post.payment('42217d45-cf22-4430-ab02-acc1f8a2d020', '10.00',\n      '2019-05-07', 'A new payment')\n"
+          },
+          {
+            "lang": "Java",
+            "name": "Java (EazySDK)",
+            "source": "Post post = new Post(settings);\nString request = post.payment(\"1802e1dd-a657-428c-b8d0-ba162fc76203\", \"10.00\", \"2019-08-01\", \"A comment\");\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" --request POST https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/contract/{contractId}/payment?amount=10.00&dueDate=2019-08-01&comment=A%20comment\n"
+          }
+        ]
+      }
+    },
+    "/client/{clientCode}/contract/{contractId}/payment/{paymentId}": {
+      "delete": {
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The contract GUID on which the payment you are amending has been lodged.\n",
+            "format": "guid",
+            "in": "path",
+            "name": "contractId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The payment GUID of the payment you wish to amend.\n",
+            "format": "guid",
+            "in": "path",
+            "name": "paymentId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "A comment that can be returned when querying the payment.",
+            "in": "query",
+            "maxLength": 255,
+            "name": "comment",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "Message": "Payment deleted"
+              },
+              "application/xml": "<GeneralAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Payment deleted</Message>\n</GeneralAcknowledgement>\n"
+            }
+          },
+          "400": {
+            "description": "Bad request - missing comment",
+            "examples": {
+              "application/json": {
+                "Message": "Comment must not be empty"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Comment must not be empty</Message>\n</ErrorAcknowledgement>\n"
+            }
+          },
+          "403": {
+            "description": "Forbidden - payment contract is protected",
+            "examples": {
+              "application/json": {
+                "Message": "Payment cannot be accessed"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Payment cannot be accessed</Message>\n</ErrorAcknowledgement>\n"
+            }
+          },
+          "404": {
+            "description": "Payment not found",
+            "examples": {
+              "application/json": {
+                "Message": "Payment not found"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Payment not found</Message>\n</ErrorAcknowledgement>\n"
+            }
+          }
+        },
+        "tags": [
+          "Payment Manipulation"
+        ],
+        "summary": "Deletes an existing payment from the database (providing it has not yet been submitted to BACS).",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "name": "C# (EazySDK)",
+            "source": "var delete = new Delete(settings);\nstring request = delete.Payment(\"2b62a358-9a1a-4c71-9450-e419e393dcd1\", \"750f142f-1608-464a-8e34-4b322e703c2c\", \"A comment\");\n"
+          },
+          {
+            "lang": "Python",
+            "name": "Python (EazySDK)",
+            "source": "client = eazysdk.EazySDK()\nrequest = client.delete.payment('2b62a358-9a1a-4c71-9450-e419e393dcd1', '750f142f-1608-464a-8e34-4b322e703c2c', 'A comment')\n"
+          },
+          {
+            "lang": "Java",
+            "name": "Java (EazySDK)",
+            "source": "Delete delete = new Delete(settings);\nString request = delete.payment(\"2b62a358-9a1a-4c71-9450-e419e393dcd1\", \"750f142f-1608-464a-8e34-4b322e703c2c\", \"A comment\");\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" --request DELETE \"https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/contract/{contractId}/payment/{paymentId}?comment=A%20comment\"\n"
+          }
+        ]
+      },
+      "get": {
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The contract GUID on which the payment you are amending has been lodged.\n",
+            "format": "guid",
+            "in": "path",
+            "name": "contractId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The payment GUID of the payment you wish to amend.\n",
+            "format": "guid",
+            "in": "path",
+            "name": "paymentId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "Amount": 15.99,
+                "Comment": "This is a test",
+                "Date": "2017-05-15T00:00:00.000Z",
+                "Id": "36bb4f4f-9a7f-4ead-82dc-9295c6fb9e8b",
+                "IsAdhoc": true,
+                "IsCredit": false,
+                "ReasonCode": "0,",
+                "Status": "Pending",
+                "Type": "BACS"
+              },
+              "application/xml": "<PaymentDetail xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Id>36bb4f4f-9a7f-4ead-82dc-9295c6fb9e8b</Id>\n    <Status>Pending</Status>\n    <IsCredit>false</IsCredit>\n    <IsAdhoc>true</IsAdhoc>\n    <Amount>15.99</Amount>\n    <Date>2017-05-15T00:00:00</Date>\n    <ReasonCode>0</ReasonCode>\n    <Comment>This is a test</Comment>\n    <Type>BACS</Type>\n</PaymentDetail>\n"
+            }
+          },
+          "403": {
+            "description": "Forbidden - payment contract is protected",
+            "examples": {
+              "application/json": {
+                "Message": "Payment cannot be accessed"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Payment cannot be accessed</Message>\n</ErrorAcknowledgement>\n"
+            }
+          },
+          "404": {
+            "description": "Payment not found",
+            "examples": {
+              "application/json": {
+                "Message": "Payment not found"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Payment not found</Message>\n</ErrorAcknowledgement>\n"
+            }
+          }
+        },
+        "tags": [
+          "Payment Manipulation"
+        ],
+        "summary": "Queries the database for details of an existing payment.",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "name": "C# (EazySDK)",
+            "source": "var get = new Get(settings);\nstring response = get.PaymentsSingle(\"2b62a358-9a1a-4c71-9450-e419e393dcd1\", \"6917d51a-be83-424f-b0a6-31fbf9574a79\");\n"
+          },
+          {
+            "lang": "Python",
+            "name": "Python (EazySDK)",
+            "source": "client = eazysdk.EazySDK()\nresponse = client.get.payments_single('ab09362d-f88e-4ee8-be85-e27e1a6ce06a',\n              '36bb4f4f-9a7f-4ead-82dc-9295c6fb9e8b')\n"
+          },
+          {
+            "lang": "Java",
+            "name": "Java (EazySDK)",
+            "source": "Get get = new Get(settings);\nString response = get.paymentsSingle(\"2b62a358-9a1a-4c71-9450-e419e393dcd1\", \"6917d51a-be83-424f-b0a6-31fbf9574a79\");\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" \"https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/contract/{contractId}/payment/{paymentId}\"\n"
+          }
+        ]
+      },
+      "patch": {
+        "produces": [
+          "application/octet-stream",
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The contract GUID on which the payment you are amending has been lodged.\n",
+            "format": "guid",
+            "in": "path",
+            "name": "contractId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The payment GUID of the payment you wish to amend.\n",
+            "format": "guid",
+            "in": "path",
+            "name": "paymentId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "A comment that can be returned when querying the payment.",
+            "in": "query",
+            "maxLength": 255,
+            "name": "comment",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The amount you wish to change the payment to.",
+            "in": "query",
+            "multipleOf": 0.01,
+            "name": "amount",
+            "required": true,
+            "type": "number"
+          },
+          {
+            "description": "The date on which you require the payment to be taken.\n**Format: `YYYY-MM-DDT00:00:00.000`**\n",
+            "format": "date-time",
+            "in": "query",
+            "name": "date",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "Message": "Payment updated"
+              },
+              "application/xml": "<GeneralAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Payment updated</Message>\n</GeneralAcknowledgement>\n"
+            },
+            "schema": {
+              "$ref": "#/definitions/Payment"
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid arguments",
+            "examples": {
+              "application/json": {
+                "Message": "An amount, comment or date must be passed"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>An amount, comment or date must be passed</Message>\n</ErrorAcknowledgement>\n"
+            }
+          },
+          "403": {
+            "description": "Forbidden - payment contract is protected",
+            "examples": {
+              "application/json": {
+                "Message": "Payment cannot be accessed"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Payment cannot be accessed</Message>\n</ErrorAcknowledgement>\n"
+            }
+          },
+          "404": {
+            "description": "Payment not found",
+            "examples": {
+              "application/json": {
+                "Message": "Payment not found"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Payment not found</Message>\n</ErrorAcknowledgement>\n"
+            }
+          }
+        },
+        "tags": [
+          "Payment Manipulation"
+        ],
+        "summary": "Amends an existing payment in the database.",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "name": "C# (EazySDK)",
+            "source": "var patch = new Patch(settings);\nstring request = patch.Payment(\"2b62a358-9a1a-4c71-9450-e419e393dcd1\", \"a75f9829-2753-4f67-aafb-bb24aba27dd1\", \"10.00\", \"2019-08-01\", \"test comment\");\n"
+          },
+          {
+            "lang": "Python",
+            "name": "Python (EazySDK)",
+            "source": "client = eazysdk.EazySDK()\nresponse = client.patch.payment('36bb4f4f-9a7f-4ead-82dc-9295c6fb9e8b',\n'36bb4f4f-9a7f-4ead-82dc-9295c6fb9e8b', 10.50, '2019-06-04',\n'A comment')\n"
+          },
+          {
+            "lang": "Java",
+            "name": "Java (EazySDK)",
+            "source": "Patch patch = new Patch(settings);\nString request = patch.payment(\"2b62a358-9a1a-4c71-9450-e419e393dcd1\", \"a75f9829-2753-4f67-aafb-bb24aba27dd1\", \"10.00\", \"2019-08-01\", \"test comment\");\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" --request PATCH \"https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/contract/{contractId}/payment/{paymentId}?amount=10.00&date=2019-08-01&comment=test%20comment\"\n"
+          }
+        ]
+      }
+    },
+    "/client/{clientCode}/contract/{contractId}/reactivate": {
+      "post": {
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The contract GUID that you wish to reactivate.",
+            "format": "guid",
+            "in": "path",
+            "name": "contractId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "Message": "Contract reactivated"
+              },
+              "application/xml": "<GeneralAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract reactivated</Message>\n</GeneralAcknowledgement>\n"
+            }
+          },
+          "403": {
+            "description": "Forbidden - contract is protected",
+            "examples": {
+              "application/json": {
+                "Message": "Contract cannot be accessed"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract cannot be accessed</Message>\n</ErrorAcknowledgement>\n"
+            }
+          },
+          "404": {
+            "description": "Contract not found",
+            "examples": {
+              "application/json": {
+                "Message": "Contract not found"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract not found</Message>\n</ErrorAcknowledgement>\n"
+            }
+          }
+        },
+        "tags": [
+          "Reactivating a Direct Debit"
+        ],
+        "summary": "Reactivates the Direct Debit if it is in the ***Cancelled*** state.",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "name": "C# (EazySDK)",
+            "source": "var post = new Post(settings);\nstring request = post.ReactivateDirectDebit(\"1802e1dd-a657-428c-b8d0-ba162fc76203\");\n"
+          },
+          {
+            "lang": "Python",
+            "name": "Python (EazySDK)",
+            "source": "client = eazysdk.EazySDK()\nrequest = client.post.reactivate_direct_debit('42217d45-cf22-4430-ab02-acc1f8a2d020')\n"
+          },
+          {
+            "lang": "Java",
+            "name": "Java (EazySDK)",
+            "source": "Post post = new Post(settings);\nString request = post.reactivateDirectDebit(\"1802e1dd-a657-428c-b8d0-ba162fc76203\");\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" --request POST \"https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/contract/{contractId}/reactivate\"\n"
+          }
+        ]
+      }
+    },
+    "/client/{clientCode}/contract/{contractId}/reference": {
+      "patch": {
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The contract GUID that you wish to amend.",
+            "format": "guid",
+            "in": "path",
+            "name": "contractId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "If you have made arrangements with us to use a custom direct debit \nreferencing scheme, pass the new custom direct debit using this parameter.\nThe field may only contain alphanumeric data (`a-z`, `A-Z`, `0-9`) and\ncertain special characters (hyphen `-` or solidus `/`).\n",
+            "in": "query",
+            "maxLength": 18,
+            "name": "newDDRef",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "Message": "Contract reference updated"
+              },
+              "application/xml": "<GeneralAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract reference updated</Message>\n</GeneralAcknowledgement>\n"
+            }
+          },
+          "403": {
+            "description": "Forbidden - account not authorised",
+            "examples": {
+              "application/json": {
+                "Message": "API not enabled"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>API not enabled</Message>\n</ErrorAcknowledgement>\n"
+            }
+          },
+          "404": {
+            "description": "Contract not found",
+            "examples": {
+              "application/json": {
+                "Message": "Contract not found"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract not found</Message>\n</ErrorAcknowledgement>\n"
+            }
+          }
+        },
+        "tags": [
+          "Contract Amendment"
+        ],
+        "description": "In general, our software will allocate a unique direct debit reference\nfor every contract created within the system. For own SUN and FM SUN\nclients that have made prior arrangements with us, it is possible to\nchange a reference number after the contract has been set up. Please\nnote that using this facility will incur extra charges as new\ninstructions will need to be sent to the bank via BACS.\n",
+        "summary": "Changing the Direct Debit Reference (for authorised users only)",
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" --request PATCH \"https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/contract/{contractId}/reference?newDDRef=TEST-MT012345\"\n"
+          }
+        ]
+      }
+    },
+    "/client/{clientCode}/contract/{contractId}/restart": {
+      "post": {
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The contract GUID that you wish to restart.",
+            "format": "guid",
+            "in": "path",
+            "name": "contractId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "If the contract is for regular payments, then the day on which you wish\nthe first payment should be passed with this parameter.  **NOTE:** *You\nmay not* select days 29, 30 or 31 of the month; if you wish to select the\nlast day of the month; pass the integer value 99 which represent `Last day of the Month`.\nThis field is only mandatory if the contract is **not** an ad-hoc contract.\nThis field is only mandatory if the contract is **annual** or **monthly**.\nYou may only select days 1 to 28 or “Last day of the month” which is equal with value 99.\nChoosing 29, 30 or 31 will result in payments being skipped in\nmonths that do not contain that date.\n",
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              99
+            ],
+            "in": "query",
+            "name": "paymentDayInMonth",
+            "type": "integer"
+          },
+          {
+            "description": "If the contract is for regular payments then the month in which you\nwish the first payment should be passed with this parameter.\nThis field is only mandatory if the contract is **not** an ad-hoc contract.\nThis field is only mandatory if the contract is **annual** or **monthly**.\n",
+            "in": "query",
+            "maximum": 12,
+            "minimum": 1,
+            "name": "paymentMonthInYear",
+            "type": "integer"
+          },
+          {
+            "description": "Pass the way in which the contract should end using this parameter.\nIf the contract is **ad-hoc,** *you must* pass `Until further notice`.\n",
+            "enum": [
+              "Take certain number of debits",
+              "Until further notice",
+              "End on exact date"
+            ],
+            "in": "query",
+            "name": "terminationType",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "If this is a “Take certain Number of Debits” contract then the number of\ndebits to be taken should be passed using this parameter.\nThis field is only mandatory if the termination type is “Take Certain\nNumber of Debits”.\n",
+            "in": "query",
+            "maximum": 999,
+            "minimum": 0,
+            "name": "numberOfDebits",
+            "type": "integer"
+          },
+          {
+            "description": "If this is a contract for regular payments **and** the first payment is\ndifferent to the regular payments, then pass the first payment amount\nwith this parameter.\n**Do not** pass this parameter with ad-hoc contracts, or where the first\namount is the same as the regular amount.\n",
+            "in": "query",
+            "multipleOf": 0.01,
+            "name": "initialAmount",
+            "type": "number"
+          },
+          {
+            "description": "If the contract is for regular payments, then the regular payment\namount should be passed using this parameter. Do not pass this\nparameter if the contract is an ad-hoc contract.\nThis field is only mandatory if the contract is **not** an ad-hoc contract.\n",
+            "in": "query",
+            "multipleOf": 0.01,
+            "name": "amount",
+            "type": "number"
+          },
+          {
+            "description": "If this is a contract for regular payments **and** the final payment is\ndifferent to the regular payments, then pass the final payment amount\nwith this parameter. **Do not** pass this parameter with ad-hoc\ncontracts, or where the final amount is the same as the regular amount.\n",
+            "in": "query",
+            "multipleOf": 0.01,
+            "name": "finalAmount",
+            "type": "number"
+          },
+          {
+            "description": "This parameter decides what will happen when the contract ends. If you have\nselected a `terminationType` of `Until Further Notice` or the contract is an\nad-hoc contract, *you must* pass `Switch to Further Notice`.\n",
+            "enum": [
+              "Expire",
+              "Switch to Further Notice"
+            ],
+            "in": "query",
+            "name": "atTheEnd",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "If you wish to add an additional reference to the contract for you own use,\nthis can be passed to using the `additionalReference` parameter.\n",
+            "in": "query",
+            "maxLength": 255,
+            "name": "additionalReference",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "Message": "Contract restarted"
+              },
+              "application/xml": "<GeneralAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract restarted</Message>\n</GeneralAcknowledgement>\n"
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid restart date",
+            "examples": {
+              "application/json": {
+                "Message": "Start date must be greater than {minStartDate}\n"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Start date must be greater than {minStartDate}</Message>\n</ErrorAcknowledgement>\n"
+            }
+          },
+          "403": {
+            "description": "Forbidden - contract is protected",
+            "examples": {
+              "application/json": {
+                "Message": "Contract cannot be accessed"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract cannot be accessed</Message>\n</ErrorAcknowledgement>\n"
+            }
+          },
+          "404": {
+            "description": "Contract not found",
+            "examples": {
+              "application/json": {
+                "Message": "Contract not found"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract not found</Message>\n</ErrorAcknowledgement>\n"
+            }
+          }
+        },
+        "tags": [
+          "Restart a Contract"
+        ],
+        "summary": "Reactivates the Direct Debit if it is in the ***Expired*** state and payments\nhave already come to an end.\n",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "name": "C# (EazySDK)",
+            "source": "var post = new Post(settings);\nstring request = post.RestartContract(\"1802e1dd-a657-428c-b8d0-ba162fc76203\", \"Until further notice\", \"Switch to further notice\");\n"
+          },
+          {
+            "lang": "Python",
+            "name": "Python (EazySDK)",
+            "source": "client = eazysdk.EazySDK()\nrequest = client.post.restart_contract(\n  '42217d45-cf22-4430-ab02-acc1f8a2d020',\n  'Until further notice', 'Switch to further notice'\n)\n"
+          },
+          {
+            "lang": "Java",
+            "name": "Java (EazySDK)",
+            "source": "Post post = new Post(settings);\nString request = post.restartContract().contract(\"1802e1dd-a657-428c-b8d0-ba162fc76203\").terminationType(\"Until further notice\").atTheEnd(\"Switch to further notice\").query();\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" --request POST https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/contract/{contractId}/restart?terminationType=Until%20further%20notice&atTheEnd=Switch%20to%20further%20notice\n"
+          }
+        ]
+      }
+    },
+    "/client/{clientCode}/contract/{contractId}/weekly": {
+      "patch": {
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The contract GUID that you wish to amend.",
+            "format": "guid",
+            "in": "path",
+            "name": "contractId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The new day on which payments are to be taken.\nPayments will be collected on the next available instance of the payment\nday, which will be a **minimum** of 5 working days in the future. Any\npayment already scheduled in the next 5 working days <u>will still be\ncollected</u>.\n",
+            "enum": [
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday"
+            ],
+            "in": "query",
+            "name": "day",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "A comment to explain the reason for the change of day.",
+            "in": "query",
+            "maxLength": 255,
+            "name": "comment",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "If you wish to take the next payment to be a different amount (e.g.\npro rata because the number of days between payments will deb different)\nthen pass the amount using this parameter. Ensure that `patchNextPayment`\nis set to `true` if you are using this.\n",
+            "in": "query",
+            "multipleOf": 0.01,
+            "name": "nextPaymentPatchAmount",
+            "type": "number"
+          },
+          {
+            "description": "Set to `true` if using `nextPaymentPatchAmount` or `false` if not.\n",
+            "in": "query",
+            "name": "patchNextPayment",
+            "required": true,
+            "type": "boolean"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "Message": "Contract updated"
+              },
+              "application/xml": "<GeneralAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Contract updated</Message>\n</GeneralAcknowledgement>\n"
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid day",
+            "examples": {
+              "application/json": {
+                "Message": "Day is invalid for this contract"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Day is invalid for this contract</Message>\n</ErrorAcknowledgement>\n"
+            }
+          }
+        },
+        "tags": [
+          "Contract Amendment"
+        ],
+        "description": "Amends an existing contract payment date in the database.",
+        "summary": "Changing the Day (Weekly Schedules)",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "name": "C# (EazySDK)",
+            "source": "var patch = new Patch(settings);\nstring request = patch.ContractDayWeekly(\"1802e1dd-a657-428c-b8d0-ba162fc76203\", \"15\", \"Change day\", false);\n"
+          },
+          {
+            "lang": "Python",
+            "name": "Python (EazySDK)",
+            "source": "client = eazysdk.EazySDK()\nrequest = client.patch.contract_day_weekly('36bb4f4f-9a7f-4ead-82dc-9295c6fb9e8b', 15,\n'A comment', False)\n"
+          },
+          {
+            "lang": "Java",
+            "name": "Java (EazySDK)",
+            "source": "Patch patch = new Patch(settings);\nString request = patch.contractDayWeekly(\"1802e1dd-a657-428c-b8d0-ba162fc76203\", \"15\", \"Change day\", false);\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" --request PATCH \"https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/contract/{contractId}/weekly?day=15&comment=Change%20day&patchNextPayment=false\"\n"
+          }
+        ]
+      }
+    },
+    "/client/{clientCode}/customer": {
+      "get": {
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The customer’s contact email address.",
+            "in": "query",
+            "maxLength": 255,
+            "name": "email",
+            "type": "string"
+          },
+          {
+            "description": "The customer’s title (Mr/Mrs/Ms/Miss/Mx etc).",
+            "in": "query",
+            "maxLength": 10,
+            "name": "title",
+            "type": "string"
+          },
+          {
+            "description": "The date/time from which you want to find new customers added.\n**Format: `YYYY-MM-DDT00:00:00.000`**\n",
+            "format": "date-time",
+            "in": "query",
+            "name": "from",
+            "type": "string"
+          },
+          {
+            "description": "The date/time to which you want to find new customers added.\n**Format: `YYYY-MM-DDT00:00:00.000`**\n",
+            "format": "date-time",
+            "in": "query",
+            "name": "to",
+            "type": "string"
+          },
+          {
+            "description": "The customer’s date of birth.\n**Format: `YYYY-MM-DDT00:00:00.000`**\n",
+            "format": "date-time",
+            "in": "query",
+            "name": "dateOfBirth",
+            "type": "string"
+          },
+          {
+            "description": "A **unique** reference number allocated by the client for this customer.",
+            "in": "query",
+            "maxLength": 255,
+            "name": "customerRef",
+            "type": "string"
+          },
+          {
+            "description": "The customer's first name.",
+            "in": "query",
+            "maxLength": 255,
+            "name": "firstName",
+            "type": "string"
+          },
+          {
+            "description": "The customer's surname.",
+            "in": "query",
+            "maxLength": 255,
+            "name": "surname",
+            "type": "string"
+          },
+          {
+            "description": "The company name of the customer (if applicable).",
+            "in": "query",
+            "maxLength": 255,
+            "name": "companyName",
+            "type": "string"
+          },
+          {
+            "description": "The customer's Post Code.",
+            "in": "query",
+            "maxLength": 8,
+            "name": "postCode",
+            "type": "string"
+          },
+          {
+            "description": "The customer's bank account number.\nThis must be eight numerical characters with all leading zeros left intact.\nExamples include: `01065284`, `00000000`, `26280464`.\nAny non-numerical characters **must be removed** before passing the data to the API.\n",
+            "in": "query",
+            "maxLength": 8,
+            "minLength": 8,
+            "name": "accountNumber",
+            "pattern": "[0-9]{8}",
+            "type": "string"
+          },
+          {
+            "description": "The customer's bank sort code.\nThis must be six numerical characters with all leading zeros left intact.\nExamples include: `089286` `100000` `600000`, `230580`.\nIn the United Kingdom it is sometimes customary to insert dashes/hyphens\nbetween groups of two characters (e.g. `08-92-86`, `23-05-80`). Any hyphens,\ndashes or non-numerical characters **must be removed** before being passed\nto the API.\n",
+            "in": "query",
+            "maxLength": 6,
+            "minLength": 6,
+            "name": "bankSortCode",
+            "pattern": "[0-9]{6}",
+            "type": "string"
+          },
+          {
+            "description": "The name of the customer's bank account.\nThis must be a maximum of eighteen alphanumeric characters `[0-9a-zA-Z ]`.\nA space is also allowed. Any special characters or punctuation such as ampersands,\napostrophes, hyphens, slashes, backslashes, commas, full stops etc. **must be\nremoved** before passing to the API.\n",
+            "in": "query",
+            "maxLength": 18,
+            "name": "accountHolderName",
+            "pattern": "[0-9a-zA-Z ]{0, 18}",
+            "type": "string"
+          },
+          {
+            "description": "The customer's home telephone number.",
+            "in": "query",
+            "maxLength": 20,
+            "name": "homePhoneNumber",
+            "type": "string"
+          },
+          {
+            "description": "The customer's work telephone number.",
+            "in": "query",
+            "maxLength": 18,
+            "name": "workPhoneNumber",
+            "type": "string"
+          },
+          {
+            "description": "The customer's mobile telephone number.",
+            "in": "query",
+            "maxLength": 18,
+            "name": "mobilePhoneNumber",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "AddressDetail": {
+                  "Line1": "1 Tebbit Mews",
+                  "Line2": "Winchcombe Street",
+                  "Line3": "Cheltenham",
+                  "PostCode": "A1 1AA"
+                },
+                "BankDetail": {
+                  "AccountHolderName": "Access Paysuite",
+                  "AccountNumber": "01065285",
+                  "BankSortCode": "309906"
+                },
+                "CompanyName": "Access Paysuite",
+                "CustomerRef": "AE102890",
+                "DateAdded\"": "2017-04-12T13:22:48.800Z",
+                "DateOfBirth": "2017-01-01T00:00:00.000Z",
+                "Email": "spam@eazycollect.co.uk",
+                "FirstName": "Matthew",
+                "HomePhoneNumber": "01234567890",
+                "Id": "c36ce83c-0064-4c1e-a157-cd4c70decf47",
+                "IsArchived": true,
+                "Memos": [],
+                "Surname": "Harris",
+                "Title": "Mr"
+              },
+              "application/xml": "<CustomerDetail xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Id>c36ce83c-0064-4c1e-a157-cd4c70decf47</Id>\n    <CustomerRef>AE102890</CustomerRef>\n    <IsArchived>true</IsArchived>\n    <DateAdded>2017-04-12T13:22:48.8</DateAdded>\n    <Title>Mr</Title>\n    <FirstName>Matthew</FirstName>\n    <Surname>Harris</Surname>\n    <CompanyName>Access Paysuite</CompanyName>\n    <DateOfBirth>2017-01-01T00:00:00</DateOfBirth>\n    <HomePhoneNumber>01234567890</HomePhoneNumber>\n    <Email>spam@eazycollect.co.uk</Email>\n    <AddressDetail>\n        <Line1>1 Tebbit Mews</Line1>\n        <Line2>Winchcombe Street</Line2>\n        <Line3>Cheltenham</Line3>\n        <PostCode>A1 1AA</PostCode>\n    </AddressDetail>\n    <BankDetail>\n        <AccountHolderName>Access Paysuite</AccountHolderName>\n        <AccountNumber>01065285</AccountNumber>\n        <BankSortCode>309906</BankSortCode>\n    </BankDetail>\n    <Memos />\n</CustomerDetail>"
+            }
+          },
+          "404": {
+            "description": "Customer not found",
+            "examples": {
+              "application/json": {
+                "Message": "API not enabled"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><Message>API\n  not enabled</Message><ErrorCode>7</ErrorCode></ErrorAcknowledgement>"
+            }
+          }
+        },
+        "tags": [
+          "Customer Manipulation"
+        ],
+        "description": "**NOTE:** The response from a GET method includes an `IsArchived` flag.\nOn a newly created customer, this will show as `true` which is normal.\nThe record will automatically change to `false` when an associated live\nDirect Debit (contract) is attached to it.\n",
+        "summary": "Queries the database for a customer or set of customers.",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "name": "C# (EazySDK)",
+            "source": "var get = new Get(settings);\nstring response = get.Customers();\n"
+          },
+          {
+            "lang": "Python",
+            "name": "Python (EazySDK)",
+            "source": "client = eazysdk.EazySDK()\nresponse = client.get.customers()\n"
+          },
+          {
+            "lang": "Java",
+            "name": "Java (EazySDK)",
+            "source": "Get get = new Get(settings);\nString response = get.customers();\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" \"https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/customer\"\n"
+          }
+        ]
+      },
+      "post": {
+        "produces": [
+          "application/octet-stream",
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The customer’s contact email address.",
+            "in": "query",
+            "maxLength": 255,
+            "name": "email",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The customer’s title (Mr/Mrs/Ms/Miss/Mx etc).",
+            "in": "query",
+            "maxLength": 10,
+            "name": "title",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The customer’s date of birth.\n**Format: `YYYY-MM-DDT00:00:00.000`**\n",
+            "format": "date-time",
+            "in": "query",
+            "name": "dateOfBirth",
+            "type": "string"
+          },
+          {
+            "description": "A **unique** reference number allocated by the client for this customer.",
+            "in": "query",
+            "maxLength": 255,
+            "name": "customerRef",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The customer's first name.",
+            "in": "query",
+            "maxLength": 255,
+            "name": "firstName",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The customer's surname.",
+            "in": "query",
+            "maxLength": 255,
+            "name": "surname",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The company name of the customer (if applicable).",
+            "in": "query",
+            "maxLength": 255,
+            "name": "companyName",
+            "type": "string"
+          },
+          {
+            "description": "The customer's Post Code.",
+            "in": "query",
+            "maxLength": 8,
+            "name": "postCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The customer's bank account number.\nThis must be eight numerical characters with all leading zeros left intact.\nExamples include: `01065284`, `00000000`, `26280464`.\nAny non-numerical characters **must be removed** before passing the data to the API.\n",
+            "in": "query",
+            "maxLength": 8,
+            "minLength": 8,
+            "name": "accountNumber",
+            "pattern": "[0-9]{8}",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The customer's bank sort code.\nThis must be six numerical characters with all leading zeros left intact.\nExamples include: `089286` `100000` `600000`, `230580`.\nIn the United Kingdom it is sometimes customary to insert dashes/hyphens\nbetween groups of two characters (e.g. `08-92-86`, `23-05-80`). Any hyphens,\ndashes or non-numerical characters **must be removed** before being passed\nto the API.\n",
+            "in": "query",
+            "maxLength": 6,
+            "minLength": 6,
+            "name": "bankSortCode",
+            "pattern": "[0-9]{6}",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The name of the customer's bank account.\nThis must be a maximum of eighteen alphanumeric characters `[0-9a-zA-Z ]`.\nA space is also allowed. Any special characters or punctuation such as ampersands,\napostrophes, hyphens, slashes, backslashes, commas, full stops etc. **must be\nremoved** before passing to the API.\n",
+            "in": "query",
+            "maxLength": 18,
+            "name": "accountHolderName",
+            "pattern": "[0-9a-zA-Z ]{0, 18}",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The customer's home telephone number.",
+            "in": "query",
+            "maxLength": 20,
+            "name": "homePhoneNumber",
+            "type": "string"
+          },
+          {
+            "description": "The customer's work telephone number.",
+            "in": "query",
+            "maxLength": 18,
+            "name": "workPhoneNumber",
+            "type": "string"
+          },
+          {
+            "description": "The customer's mobile telephone number.",
+            "in": "query",
+            "maxLength": 18,
+            "name": "mobilePhoneNumber",
+            "type": "string"
+          },
+          {
+            "description": "Line one of the customer's postal address.",
+            "in": "query",
+            "maxLength": 50,
+            "name": "line1",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Line two of the customer's postal address.",
+            "in": "query",
+            "maxLength": 30,
+            "name": "line2",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Line three of the customer's postal address.",
+            "in": "query",
+            "maxLength": 30,
+            "name": "line3",
+            "type": "string"
+          },
+          {
+            "description": "Line four of the customer's postal address.",
+            "in": "query",
+            "maxLength": 30,
+            "name": "line4",
+            "type": "string"
+          },
+          {
+            "description": "If the customer has provided any middle initials, they can be added in this field.",
+            "in": "query",
+            "maxLength": 5,
+            "name": "initials",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "CustomerRef": "AE102888",
+                "Id": "12f5734a-bfc3-45f2-9edd-44d4a05cf751"
+              },
+              "application/xml": "<CustomerAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <CustomerRef>AE102889</CustomerRef>\n    <Id>a1d86a0a-6806-408b-b5ce-1fae797cc142</Id>\n</CustomerAcknowledgement>\n"
+            },
+            "schema": {
+              "properties": {
+                "Id": {
+                  "description": "The GUID of the customer record. You must save this to your database\nas it will be needed should you wish to update the customer record\nor create a Direct Debit (Contract).\n",
+                  "type": "string"
+                },
+                "customerRef": {
+                  "description": "The customer reference that you passed via the API into the system.\n",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "400": {
+            "description": "Bad request - email mandatory",
+            "examples": {
+              "application/json": {
+                "ErrorCode": 2,
+                "Message": "Customer email is mandatory for this client"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <ErrorCode>2</ErrorCode>\n    <Message>Customer email is mandatory for this client</Message>\n</ErrorAcknowledgement>\n"
+            },
+            "schema": {
+              "properties": {
+                "Message": {
+                  "description": "If there are any problems with the record, these will be shown in\nthe message field.\n",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Customer Manipulation"
+        ],
+        "description": "### Error Handling\nErrors are presented back in the JSON or XML response in human readable\nform.\n**Common Errors:**\n*Error:*\n“There is an existing Customer with the same Client and Customer ref in\nthe database already.”\n*Explanation:*\nThe customer reference must be unique; this indicates that a customer\nwith the customerRef provided in the API call already exists\n*Resolution:*\nCheck that the customer does not already exist; if not, you must use\nanother unique customerRef.\n*Error:*\nInvalid Postcode. The postcode must have 5, 6 or 7 characters only\n*Explanation:*\nThe postcode supplied is not in a correct UK format.\n*Resolution:*\nUK postcodes can be formed in the following ways:\n- A99 9AA\n- AA99 9AA\n- AA9A 9AA\nWhere A is a capital letter \\[A-Z\\] and 9 is a number \\[0-9\\]. Please\nprovide the postcode in one of the recognised formats.\n",
+        "summary": "Creates a customer in the database.",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "name": "C# (EazySDK)",
+            "source": "var post = new Post(settings);\nstring request = post.Customer(\"john.doe@test.com\", \"Mr\", \"999999\", \"John\", \"Doe\", \"1 Tebbit Mews\", \"GL52 2NF\", \"12345678\", \"123456\", \"Mr John Doe\");\n"
+          },
+          {
+            "lang": "Python",
+            "name": "Python (EazySDK)",
+            "source": "client = eazysdk.EazySDK()\nrequest = client.post.customer(email=\"john.doe@test.com\", title=\"Mr\", customer_reference=\"999999\", first_name=\"John\", surname=\"Doe\", line1=\"1 Tebbit Mews\", post_code=\"GL52 2NF\", account_number=\"12345678\", sort_code=\"123456\", account_holder_name=\"Mr John Doe\")\n"
+          },
+          {
+            "lang": "Java",
+            "name": "Java (EazySDK)",
+            "source": "Post post = new Post(settings);\nString request = post.customer().email(\"john.doe@test.com\").title(\"Mr\").customerReference(\"999999\")\n      .firstName(\"John\").surname(\"Doe\").line1(\"1 Tebbit Mews\").postCode(\"GL52 2NF\").accountNumber(\"12345678\")\n      .sortCode(\"123456\").accountHolderName(\"Mr John Doe\").query();\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" --request POST https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/customer?email=john.doe@test.com&title=Mr&customerRef=999999&firstName=John&surname=Doe&line1=1%20Tebbit%20Mews&postCode=GL52%202NF&accountNumber=12345678&bankSortCode=123456&accountHolderName=Mr%20John%20Doe\n"
+          }
+        ]
+      }
+    },
+    "/client/{clientCode}/customer/{customerId}": {
+      "patch": {
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The GUID of the customer.",
+            "in": "path",
+            "name": "customerId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The customer’s contact email address.",
+            "in": "query",
+            "maxLength": 255,
+            "name": "email",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The customer’s title (Mr/Mrs/Ms/Miss/Mx etc).",
+            "in": "query",
+            "maxLength": 10,
+            "name": "title",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The customer’s date of birth.\n**Format: `YYYY-MM-DDT00:00:00.000`**\n",
+            "format": "date-time",
+            "in": "query",
+            "name": "dateOfBirth",
+            "type": "string"
+          },
+          {
+            "description": "A **unique** reference number allocated by the client for this customer.",
+            "in": "query",
+            "maxLength": 255,
+            "name": "customerRef",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The customer's first name.",
+            "in": "query",
+            "maxLength": 255,
+            "name": "firstName",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The customer's surname.",
+            "in": "query",
+            "maxLength": 255,
+            "name": "surname",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The company name of the customer (if applicable).",
+            "in": "query",
+            "maxLength": 255,
+            "name": "companyName",
+            "type": "string"
+          },
+          {
+            "description": "The customer's Post Code.",
+            "in": "query",
+            "maxLength": 8,
+            "name": "postCode",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The customer's bank account number.\nThis must be eight numerical characters with all leading zeros left intact.\nExamples include: `01065284`, `00000000`, `26280464`.\nAny non-numerical characters **must be removed** before passing the data to the API.\n",
+            "in": "query",
+            "maxLength": 8,
+            "minLength": 8,
+            "name": "accountNumber",
+            "pattern": "[0-9]{8}",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The customer's bank sort code.\nThis must be six numerical characters with all leading zeros left intact.\nExamples include: `089286` `100000` `600000`, `230580`.\nIn the United Kingdom it is sometimes customary to insert dashes/hyphens\nbetween groups of two characters (e.g. `08-92-86`, `23-05-80`). Any hyphens,\ndashes or non-numerical characters **must be removed** before being passed\nto the API.\n",
+            "in": "query",
+            "maxLength": 6,
+            "minLength": 6,
+            "name": "bankSortCode",
+            "pattern": "[0-9]{6}",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The name of the customer's bank account.\nThis must be a maximum of eighteen alphanumeric characters `[0-9a-zA-Z ]`.\nA space is also allowed. Any special characters or punctuation such as ampersands,\napostrophes, hyphens, slashes, backslashes, commas, full stops etc. **must be\nremoved** before passing to the API.\n",
+            "in": "query",
+            "maxLength": 18,
+            "name": "accountHolderName",
+            "pattern": "[0-9a-zA-Z ]{0, 18}",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The customer's home telephone number.",
+            "in": "query",
+            "maxLength": 20,
+            "name": "homePhoneNumber",
+            "type": "string"
+          },
+          {
+            "description": "The customer's work telephone number.",
+            "in": "query",
+            "maxLength": 18,
+            "name": "workPhoneNumber",
+            "type": "string"
+          },
+          {
+            "description": "The customer's mobile telephone number.",
+            "in": "query",
+            "maxLength": 18,
+            "name": "mobilePhoneNumber",
+            "type": "string"
+          },
+          {
+            "description": "Line one of the customer's postal address.",
+            "in": "query",
+            "maxLength": 50,
+            "name": "line1",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Line two of the customer's postal address.",
+            "in": "query",
+            "maxLength": 30,
+            "name": "line2",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Line three of the customer's postal address.",
+            "in": "query",
+            "maxLength": 30,
+            "name": "line3",
+            "type": "string"
+          },
+          {
+            "description": "Line four of the customer's postal address.",
+            "in": "query",
+            "maxLength": 30,
+            "name": "line4",
+            "type": "string"
+          },
+          {
+            "description": "If the customer has provided any middle initials, they can be added in this field.",
+            "in": "query",
+            "maxLength": 5,
+            "name": "initials",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "Message": "Customer updated"
+              },
+              "application/xml": "<CustomerAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <Message>Customer updated</Message>\n</CustomerAcknowledgement>\n"
+            },
+            "schema": {
+              "properties": {
+                "Message": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          }
+        },
+        "tags": [
+          "Customer Manipulation"
+        ],
+        "description": "### Error Handling\nErrors are presented back in the JSON or XML response in human readable\nform.\n**Common Errors:**\n*Error:*\n“There is an existing Customer with the same Client and Customer ref in\nthe database already.”\n*Explanation:*\nThe customer reference must be unique; this indicates that a customer\nwith the customerRef provided in the API call already exists\n*Resolution:*\nCheck that the customer does not already exist; if not, you must use\nanother unique customerRef.\n*Error:*\nInvalid Postcode. The postcode must have 5, 6 or 7 characters only\n*Explanation:*\nThe postcode supplied is not in a correct UK format.\n*Resolution:*\nUK postcodes can be formed in the following ways:\n- A99 9AA\n- AA99 9AA\n- AA9A 9AA\nWhere A is a capital letter \\[A-Z\\] and 9 is a number \\[0-9\\]. Please\nprovide the postcode in one of the recognised formats.\n",
+        "summary": "Updates (or partially updates) an existing customer in the database.",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "name": "C# (EazySDK)",
+            "source": "var patch = new Patch(settings);\nstring request = patch.Customer(\"dfca6da1-2490-4607-a256-c5799d2584e9\", Email: \"john.doe@test.com\");\n"
+          },
+          {
+            "lang": "Python",
+            "name": "Python (EazySDK)",
+            "source": "client = eazysdk.EazySDK()\nrequest = client.patch.customer(\"dfca6da1-2490-4607-a256-c5799d2584e9\", email=\"john.doe@test.com\")\n"
+          },
+          {
+            "lang": "Java",
+            "name": "Java (EazySDK)",
+            "source": "Post patch = new Patch(settings);\nString request = patch.customer(\"dfca6da1-2490-4607-a256-c5799d2584e9\").email(\"john.doe@test.com\").query();\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" --request PATCH https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/customer/dfca6da1-2490-4607-a256-c5799d2584e9?email=john.doe@test.com\n"
+          }
+        ]
+      }
+    },
+    "/client/{clientCode}/customer/{customerId}/contract": {
+      "get": {
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The GUID of the  customer (if the customer already exists).",
+            "format": "guid",
+            "in": "path",
+            "name": "customerId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "Contracts": [
+                  {
+                    "Amount": 1,
+                    "AtTheEnd": "Expire",
+                    "Description": "Collect an initial £1.00 followed by 9 payments of\n£1.00 on 15th of the month ending on 25th April 2017\n",
+                    "DirectDebitReference": "LUISCT-MT000325",
+                    "Every": 1,
+                    "ExtraInitialAmounts": "",
+                    "Id": "7aa8cef6-ec95-47a7-9ced-4aa0938559ab",
+                    "InitialAmount": 1,
+                    "IsGiftAid": true,
+                    "NumberOfDebits": 10,
+                    "PaymentDayInMonth": "15",
+                    "PaymentMonthInYear": 7,
+                    "ScheduleName": "DD Dates 1/15 - Fixed",
+                    "Start": "2016-07-15T00:00:00.000Z",
+                    "Status": "Active",
+                    "StatusExplanation": "N/A",
+                    "TerminationType": "Take certain number of debits"
+                  }
+                ],
+                "CustomerId": "19283a22-7442-4c92-b035-8fa7f5e6a9a0"
+              },
+              "application/xml": "<ContractsResponse xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <CustomerId>19283a22-7442-4c92-b035-8fa7f5e6a9a0</CustomerId>\n    <Contracts>\n        <ContractDetail>\n            <Id>7aa8cef6-ec95-47a7-9ced-4aa0938559ab</Id>\n            <DirectDebitReference>LUISCT-MT000325</DirectDebitReference>\n            <ScheduleName>DD Dates 1/15 - Fixed</ScheduleName>\n            <Description>Collect an initial £1.00 followed by 9 payments of\n            £1.00 on 15th of the month ending on 25th April\n            2017</Description>\n            <PaymentMonthInYear>7</PaymentMonthInYear>\n            <PaymentDayInMonth>15</PaymentDayInMonth>\n            <Start>2016-07-15T00:00:00</Start>\n            <TerminationDate xsi:nil=\"true\" />\n            <TerminationType>Take certain number of\n            debits</TerminationType>\n            <NumberOfDebits>10</NumberOfDebits>\n            <InitialAmount>1.00</InitialAmount>\n            <ExtraInitialAmounts />\n            <Amount>1.00</Amount>\n            <FinalAmount xsi:nil=\"true\" />\n            <Every>1</Every>\n            <IsGiftAid>true</IsGiftAid>\n            <AtTheEnd>Expire</AtTheEnd>\n            <Status>Active</Status>\n            <StatusExplanation>N/A</StatusExplanation>\n        </ContractDetail>\n    </Contracts>\n</ContractsResponse>\n"
+            }
+          }
+        },
+        "tags": [
+          "Contract Querying and Creation"
+        ],
+        "summary": "Queries the database for a contract or set of contracts.",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "name": "C# (EazySDK)",
+            "source": "var get = new Get(settings);\nstring response = get.Contracts(\"310a826b-d095-48e7-a55a-19dba82c566f\");\n"
+          },
+          {
+            "lang": "Python",
+            "name": "Python (EazySDK)",
+            "source": "client = eazysdk.EazySDK()\nresponse = client.get.contracts(\"310a826b-d095-48e7-a55a-19dba82c566f\")\n"
+          },
+          {
+            "lang": "Java",
+            "name": "Java (EazySDK)",
+            "source": "Get get = new Get(settings);\nString response = get.contracts(\"310a826b-d095-48e7-a55a-19dba82c566f\");\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" \"https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/customer/{customerId}/contract\"\n"
+          }
+        ]
+      },
+      "post": {
+        "produces": [
+          "application/octet-stream",
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The GUID of the  customer (if the customer already exists).",
+            "format": "guid",
+            "in": "path",
+            "name": "customerId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The name of the schedule to be used when creating a contract.",
+            "in": "query",
+            "maxLength": 255,
+            "name": "scheduleName",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The start date of the contract. This **must** be at least 10 **working**\ndays in the future, on a permitted date and not after the anticipated\nfirst payment date. If this is a regular schedule, use the same date as\nthe first payment date.\nOnly up to 364 days in advance.\n**Format: `YYYY-MM-DDT00:00:00.000`**\n",
+            "format": "date-time",
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "If this is a “Take certain Number of Debits” contract then the number of\ndebits to be taken should be passed using this parameter.\nThis field is only mandatory if the termination type is “Take Certain\nNumber of Debits”.\n",
+            "in": "query",
+            "maximum": 999,
+            "minimum": 0,
+            "name": "numberOfDebits",
+            "type": "integer"
+          },
+          {
+            "description": "If the contract is set to take regular payments, this parameter allows you\nto skip periods (e.g. every 2 months, every 4 weeks etc).\nThis field is only mandatory if the contract is **not** an ad-hoc contract.\n",
+            "in": "query",
+            "name": "every",
+            "type": "integer"
+          },
+          {
+            "description": "Pass true if the payments to be collected are to be subject to a gift aid\nclaim, false if not (pass false if the client is not a charity).\n",
+            "in": "query",
+            "name": "isGiftAid",
+            "required": true,
+            "type": "boolean"
+          },
+          {
+            "description": "If this is a contract for regular payments **and** the first payment is\ndifferent to the regular payments, then pass the first payment amount\nwith this parameter.\n**Do not** pass this parameter with ad-hoc contracts, or where the first\namount is the same as the regular amount.\n",
+            "in": "query",
+            "multipleOf": 0.01,
+            "name": "initialAmount",
+            "type": "number"
+          },
+          {
+            "description": "If there are extra charges to be collected with the first payment\n(e.g. a gym joining fee/registration fee) then these can be added\nseparately with this parameter. Do not pass the parameter if there\nare no extra amounts, and this must not be used if the contract is\nan ad-hoc payment contract.\n",
+            "in": "query",
+            "multipleOf": 0.01,
+            "name": "extraInitialAmounts",
+            "type": "number"
+          },
+          {
+            "description": "If the contract is for regular payments, then the regular payment\namount should be passed using this parameter. Do not pass this\nparameter if the contract is an ad-hoc contract.\nThis field is only mandatory if the contract is **not** an ad-hoc contract.\n",
+            "in": "query",
+            "multipleOf": 0.01,
+            "name": "amount",
+            "type": "number"
+          },
+          {
+            "description": "If this is a contract for regular payments **and** the final payment is\ndifferent to the regular payments, then pass the final payment amount\nwith this parameter. **Do not** pass this parameter with ad-hoc\ncontracts, or where the final amount is the same as the regular amount.\n",
+            "in": "query",
+            "multipleOf": 0.01,
+            "name": "finalAmount",
+            "type": "number"
+          },
+          {
+            "description": "If the contract is for regular payments then the month in which you\nwish the first payment should be passed with this parameter.\nThis field is only mandatory if the contract is **not** an ad-hoc contract.\nThis field is only mandatory if the contract is **annual** or **monthly**.\n",
+            "in": "query",
+            "maximum": 12,
+            "minimum": 1,
+            "name": "paymentMonthInYear",
+            "type": "integer"
+          },
+          {
+            "description": "If the contract is for regular payments, then the day on which you wish\nthe first payment should be passed with this parameter.  **NOTE:** *You\nmay not* select days 29, 30 or 31 of the month; if you wish to select the\nlast day of the month; pass the integer value 99 which represent `Last day of the Month`.\nThis field is only mandatory if the contract is **not** an ad-hoc contract.\nThis field is only mandatory if the contract is **annual** or **monthly**.\nYou may only select days 1 to 28 or “Last day of the month” which is equal with value 99.\nChoosing 29, 30 or 31 will result in payments being skipped in\nmonths that do not contain that date.\n",
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              99
+            ],
+            "in": "query",
+            "name": "paymentDayInMonth",
+            "type": "integer"
+          },
+          {
+            "description": "1 -> Monday                                                                     \n2 -> Tuesday                                                                     \n3 -> Wednesday                                                                     \n4 -> Thursday                                                                     \n5 -> Friday\nIf the contract is for regular payments and has a weekly frequency, pass the\nday of the week that you wish payments to be collected via this parameter.\nThis field is only mandatory if the contract is **not** an ad-hoc contract.\nThis field is only mandatory if the contract is **weekly**.\n",
+            "in": "query",
+            "maximum": 5,
+            "minimum": 1,
+            "name": "paymentDayInWeek",
+            "type": "integer"
+          },
+          {
+            "description": "Pass the way in which the contract should end using this parameter.\nIf the contract is **ad-hoc,** *you must* pass `Until further notice`.\n",
+            "enum": [
+              "Take certain number of debits",
+              "Until further notice",
+              "End on exact date"
+            ],
+            "in": "query",
+            "name": "terminationType",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "This parameter decides what will happen when the contract ends. If you have\nselected a `terminationType` of `Until Further Notice` or the contract is an\nad-hoc contract, *you must* pass `Switch to Further Notice`.\n",
+            "enum": [
+              "Expire",
+              "Switch to Further Notice"
+            ],
+            "in": "query",
+            "name": "atTheEnd",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "If the `terminationType` is `End on Exact Date` then the termination date\nshould be passed using this.\n**Format: `YYYY-MM-DDT00:00:00.000`**\n",
+            "format": "date-time",
+            "in": "query",
+            "name": "terminationDate",
+            "type": "string"
+          },
+          {
+            "description": "If you wish to add an additional reference to the contract for you own use,\nthis can be passed to using the `additionalReference` parameter.\n",
+            "in": "query",
+            "maxLength": 255,
+            "name": "additionalReference",
+            "type": "string"
+          },
+          {
+            "description": "**THIS PARAMETER SHOULD ONLY BE USED IF YOU HAVE BEEN INSTRUCTED TO DO SO** \nIf you have made arrangements with us to use a custom direct debit\nreferencing scheme, pass the custom direct debit using this parameter.\nThe field may only contain alphanumeric data (`a-z`, `A-Z`, `0-9`) and\ncertain special characters (hyphen `-` or solidus `/`).\n",
+            "in": "query",
+            "maxLength": 18,
+            "name": "customDirectDebitRef",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "DirectDebitRef": "LUISCT-MT000341",
+                "Id": "e39940cc-9917-4b9e-8da4-5da4866862f1"
+              },
+              "application/xml": "<ContractAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <DirectDebitRef>LUISCT-MT000340</DirectDebitRef>\n    <Id>f98c6339-6cdf-4ea6-8523-ea2bd17aedb7</Id>\n</ContractAcknowledgement>\n"
+            },
+            "schema": {
+              "properties": {
+                "Id": {
+                  "description": "The GUID of the contract record. You must save this to your database\nas it will be needed should you wish to update the contract or create\nad-hoc payments using the payments or bulk payments call.\n",
+                  "type": "string"
+                },
+                "Message": {
+                  "description": "This will be `null`.",
+                  "type": "object"
+                },
+                "directDebitRef": {
+                  "description": "This is the Direct Debit Reference that will be quoted to the\ncustomer’s bank when collecting funds. Some banks will show this\nreference on the customer’s statement, although this is not\nguaranteed.\n",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid schedule name",
+            "examples": {
+              "application/json": {
+                "Message": "{scheduleName} is not given to any schedule of any service as a name\n"
+              },
+              "application/xml": "<ErrorAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n      <Message>{scheduleName} is not given to any schedule of any service as a name</Message>\n  </ErrorAcknowledgement>\n"
+            }
+          }
+        },
+        "tags": [
+          "Contract Querying and Creation"
+        ],
+        "description": "For ad-hoc contracts, you will only need to pass `scheduleName`, `start`,\n`terminationType`, `atTheEnd` and `isGiftAid`.\n### Contract Statuses\nUpon creation, a Contract Status will read ”Inactive” and it will remain in this state until approximately 8-9 working days before either (a) the start date provided in the create contract call when creating an ad-hoc contract call or (b) the first payment date in the case of scheduled/recurring payments.\nWhen in this state, it is inadvisable to attempt to make changes to the contract or to push ad-hoc payments to the contract as payments may be missed or marked unpaid without an attempt to collect being made.\nWe recommend waiting for the contract status to change to “Active” (usually 8-9 working days before collection or the start date stated in the create contract call) before making changes to the contract or pushing payments ad-hoc payments into the system.\nA contract can be manifested in one of two ways:\n| Status | Description\n| ------ | ---------------------------------------------\n| **Active** | The contract is active and will either be producing payments if it is a scheduled contract, or able to accept ad-hoc payments if it is an ad-hoc contract.\n| **Inactive** | The contract is inactive and cannot produce or accept payments, scheduled or otherwise.\nFor more information on why a contract may become “Inactive”, the `StatusExplaination` field can provide a more detailed explanation. This field is free text and we recommend that it is stored and displayed to the end user as necessary.\n### Timeframes\nYou should also be aware that you must allow a **minimum** of 10 clear\nworking days between setting up a contract and collecting the first\npayment and 5 clear working days between pushing a second or subsequent\nad-hoc payment and its collection date on an active contract.\nA working day means a banking day in the United Kingdom which is Mondays\nto Fridays and excludes public and bank holidays. A list of public and\nbank holidays can be found here: <https://www.gov.uk/bank-holidays>. A\ndate checker is also provided on our website:\n<https://www.eazycollect.co.uk/date>.\nWhile the above timeframes are the minimum required, we strongly\nrecommend building yourself a day or two of contingency into your\nprocesses so that you have time to rectify any problems that may be\nencountered. We are unable *under any circumstances* to accept\ninstructions for payments or new contracts after the appropriate cut off\ndates.\n",
+        "summary": "Creates a contract in the database.",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "name": "C# (EazySDK)",
+            "source": "var post = new Post(settings);\nstring request = post.contract(\"310a826b-d095-48e7-a55a-19dba82c566f\", \"adhoc_monthly_free\", \"2019-08-01\", false, \"Until further notice\", \"Switch to further notice\");\n"
+          },
+          {
+            "lang": "Python",
+            "name": "Python (EazySDK)",
+            "source": "client = eazysdk.EazySDK()\nrequest = client.post.contract('42217d45-cf22-4430-ab02-acc1f8a2d020',\n'test_schedule', '2019-05-07', False, 'Until further notice',\n'Switch to further notice', additional_reference='test_123')\n"
+          },
+          {
+            "lang": "Java",
+            "name": "Java (EazySDK)",
+            "source": "Post post = new Post(settings);\nString request = post.contract().customer(\"310a826b-d095-48e7-a55a-19dba82c566f\")\n      .scheduleName(\"adhoc_monthly_free\").startDate(\"2019-08-01\").giftAid(false)\n      .terminationType(\"Until further notice\").atTheEnd(\"Switch to further notice\").query();\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" --request POST https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/customer/{customerId}/contract?scheduleName=adhoc_monthly_free&start=2019-08-01&isGiftAid=false&terminationType=Until%20further%20notice&atTheEnd=Switch%20to%20further%20notice\n"
+          }
+        ]
+      }
+    },
+    "/client/{clientCode}/schedules": {
+      "get": {
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "description": "The client code provided in your welcome email.",
+            "in": "path",
+            "maxLength": 6,
+            "name": "clientCode",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "Services": [
+                  {
+                    "RefPrefix": "AN",
+                    "RefProtocol": "Auto-number",
+                    "RefTo": "null,",
+                    "Schedules": [
+                      {
+                        "AllowDifferentFirstPayment": true,
+                        "AllowDifferentLastPayment": false,
+                        "AllowFreeMonthDaySelection": false,
+                        "AllowFreeMonthSelection": true,
+                        "AllowFreeWeekDaySelection": true,
+                        "AtTheEnd": "Switch to further notice",
+                        "DayOfWeek": "Free",
+                        "DaysOfMonth": "15,24",
+                        "Description": "Annually > Every 1 year > 15th, 24th of any month\ncustomer's choice) > First , then on a regular basis\n",
+                        "Every": 1,
+                        "ExtraInitialPayments": "",
+                        "Frequency": "Annually",
+                        "IsExpiryDateReached": false,
+                        "IsNotScheduled": false,
+                        "IsSuspended": false,
+                        "MonthOfYear": "Free",
+                        "Name": "AN Dates 15/24 - Rolling",
+                        "RegistrationCharge": 0,
+                        "ScheduleId": "7663e3a0-514c-4ec7-808e-05d27a85fa98",
+                        "StartType": "As soon as possible",
+                        "TerminationType": "Until further notice"
+                      }
+                    ],
+                    "Title": "Annual Membership"
+                  }
+                ]
+              },
+              "application/xml": "<SchedulesAcknowledgement xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\nxmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n  <Services>\n    <Service>\n      <Title>Annual Membership</Title>\n      <RefProtocol>Auto-number</RefProtocol>\n      <RefPrefix>AN</RefPrefix>\n      <RefTo>null</RefTo>\n      <Schedules>\n        <Schedule>\n          <ScheduleId>7663e3a0-514c-4ec7-808e-05d27a85fa98</ScheduleId>\n          <Name>AN Dates 15/24 - Rolling</Name>\n          <Description>\n            Annually > Every 1 year > 15th, 24th of any month\n            customer's choice) > First , then on a regular basis\n          </Description>\n          <AllowDifferentFirstPayment>true</AllowDifferentFirstPayment>\n          <AllowDifferentLastPayment>false</AllowDifferentLastPayment>\n          <AllowFreeMonthDaySelection>false</AllowFreeMonthDaySelection>\n          <AllowFreeMonthSelection>true</AllowFreeMonthSelection>\n          <AllowFreeWeekDaySelection>true</AllowFreeWeekDaySelection>\n          <AtTheEnd>Switch to further notice</AtTheEnd>\n          <DayOfWeek>Free</DayOfWeek>\n          <DaysOfMonth>15,24</DaysOfMonth>\n          <Every>1</Every>\n          <ExtraInitialPayments></ExtraInitialPayments>\n          <Frequency>Annually</Frequency>\n          <IsExpiryDateReached>false</IsExpiryDateReached>\n          <IsNotScheduled>false</IsNotScheduled>\n          <IsSuspended>false</IsSuspended>\n          <MonthOfYear>Free</MonthOfYear>\n          <RegistrationCharge>0</RegistrationCharge>\n          <StartType>As soon as possible</StartType>\n          <TerminationType>Until further notice</TerminationType>\n        </Schedule>\n      </Schedules>\n    </Service>\n  </Services>\n</SchedulesAcknowledgement>\n"
+            }
+          }
+        },
+        "tags": [
+          "Obtaining Available Schedules"
+        ],
+        "description": "The response is split into two parts as follows:\n1. Services\n    Services give some general set-up detail for the underlying payment\n    schedules:\n    - Title\n    - RefProtocol\n    - RefPrefix\n    - RefFrom\n    - RefTo\n2. Schedules sit underneath Services and these are allocated to the customer\n    in order to collect payments. The parameters returned are as\n    follows:\n    - ScheduleId\n    - Name\n    - Deacription\n    - AllowDifferentFirstPayment\n    - AllowDifferentLastPayment\n    - AllowFreeMonthDaySelection\n    - AllowFreeMonthSelection\n    - AllowFreeWeekDaySelection\n    - Amount\n    - AtTheEnd\n    - DayOfWeek\n    - DaysOfMonth\n    - Every\n    - ExpectedNumberOfPayments\n    - ExtraInitialPayments\n    - FinalAmount\n    - Frequency\n    - InitialAmount\n    - IsExpiryDateReached\n    - IsNotScheduled\n    - IsSuspended\n    - MonthOfYear\n    - RegistrationCharge\n    - Start\n    - StartType\n    - TerminationDate\n    - TerminationType\n",
+        "summary": "Queries the database for details of existing schedules.",
+        "x-codeSamples": [
+          {
+            "lang": "C#",
+            "name": "C# (EazySDK)",
+            "source": "var get = new Get(settings);\nstring response = get.Schedules();\n"
+          },
+          {
+            "lang": "Python",
+            "name": "Python (EazySDK)",
+            "source": "client = eazysdk.EazySDK()\nresponse = client.get.schedules()\n"
+          },
+          {
+            "lang": "Java",
+            "name": "Java (EazySDK)",
+            "source": "Get get = new Get();\nString response = get.schedules();\n"
+          },
+          {
+            "lang": "cURL",
+            "source": "curl -H \"apiKey: {apiKey}\" \"https://ecm3.eazycollect.co.uk/api/v3/client/{clientCode}/schedules\"\n"
+          }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "CallbackEntities": {
+      "description": "The entity for which to receive callback BACS messages.",
+      "enum": [
+        "customer",
+        "contract",
+        "payment"
+      ],
+      "type": "string"
+    },
+    "Payment": {
+      "properties": {
+        "Amount": {
+          "description": "The amount of the payment.",
+          "type": "number"
+        },
+        "Comment": {
+          "description": "The comment passed when the payment was added; a ReasonMessage\nmay be appended to the end of this.\n",
+          "type": "string"
+        },
+        "Date": {
+          "description": "The due date of the payment.",
+          "format": "date-time",
+          "type": "string"
+        },
+        "Id": {
+          "description": "The GUID of the payment. We suggest that you save this so that you can easily\nchange or query the payment in future. If you are using pushed return data,\nthis will be included in any payload delivered concerning the payment.\n",
+          "format": "guid",
+          "type": "string"
+        },
+        "IsAdhoc": {
+          "description": "If this is an adhoc payment, this will show as `true`, else if it is a\nscheduled payment, it will shows as `false`.\n",
+          "type": "boolean"
+        },
+        "IsCredit": {
+          "description": "If the payment is a credit to the customer, this will show as `true`, else it\nwill show as `false`.\n",
+          "type": "boolean"
+        },
+        "ReasonCode": {
+          "description": "The BACS reason code of the payment if the payment has been returned unpaid.\nThe possible reasons are:\n- 0: Refer to payer.\n- 1: Instruction cancelled.\n- 2: Payer deceased.\n- 3: Account transferred.\n- 4: Advance notice disputed.\n- 5: No account/Wrong account type.\n- 6: No instruction.\n- 7: Amount differs.\n- 8: Amount not yet due.\nFor further details on the meanings of these codes, and the associated action\nrequired, please see our separate booklet.\n",
+          "maximum": 8,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "ReasonMessage": {
+          "description": "Plain text explanation of the ReasonCode.",
+          "type": "string"
+        },
+        "Status": {
+          "description": "The status of the payment. This can be:\n- Paid - We have received the payment from the customer (\\*\\*see below)\n- Pending – The payment has been queued to be sent to the bank for collection.\n- Represented – The payment has been returned by the bank **unpaid**, and the\n  system has created a new transaction to try and collect the amount again.\n- Unpaid – The payment has been returned by the bank unpaid and **will not**\n  be sent again to the bank for collection.\n- Withdrawn – The payment was at the point of being sent to the bank for\n  collection, but was withdrawn by Access Paysuite at the last minute. The\n  payment has not been collected.\n- Indemnity Claimed – The customer has approached their bank for a refund\n  which is being/has been processed.\n\\*\\* BACS works by exception; that is to say that payments are assumed to be\npaid unless we hear from the bank otherwise. As such, payments remain in the\n`Pending` state up until the point they are submitted to the bank for\ncollection (3 – 4 working days before the collection date). Upon submission,\nthe payment status changes to `Paid` although the actual status of the payment\nis not known until 1-2 working days after the due date.  Because of this, we\nrecommend that you do not update your system with the payment status until \n2-3 working days after the Due Date.\nIt is also important to note that BACS only works on banking days (Monday to\nFriday excluding bank and public holidays). For that reason, if a payment\nDue Date is on a weekend or a public holiday, the collection will take place\non the next banking day. For example, a payment due on Saturday, 15th April\n2017 will actually collect on Tuesday 18th April 2017 (the Monday being Easter\nMonday which is a bank holiday in the UK). Again, this needs to be factored in\nto when you check the status of payments; in the above example, it would be\nprudent to wait until late in the afternoon of 20th April 2017 or better 21st\nApril 2017 to ensure that all unpaid messages have been received from the bank\nand processed.\n",
+          "enum": [
+            "Paid",
+            "Pending",
+            "Represented",
+            "Unpaid",
+            "Withdrawn",
+            "Indemnity Claimed"
+          ],
+          "type": "string"
+        },
+        "Type": {
+          "description": "The type of payment (BACS being a bank processed payment,\nManual being something manually added via the UI.\n",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "securityDefinitions": {
+    "ApiKeyAuth": {
+      "in": "header",
+      "name": "apiKey",
+      "type": "apiKey"
+    }
+  },
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "description": "\nReturn data is passed to endpoints of your choice by setting the URL\nthat data should be posted to using the API. Data is returned to three separate endpoints based on the entity described, as explained in the table below. Each callback can be set to pass data to the same endpoint. You should contact us at\nhelp@eazycollect.co.uk to advise whether you require return\ninformation in XML or JSON format; the default is JSON.\n\n| Entity | Payload | \n| ------ | ------- |\n| customer | Notification of customer changes due to BACS notifications \n| contract | Notification of contract changes due to BACS notifications  \n| payment | Payment data returned from a scheduled payment creation   \n",
+      "name": "Return Endpoints"
+    },
+    {
+      "description": "A customer record captures the personal and banking details of the\nperson or organisation that you wish to collect funds from. A customer\nrecord needs to be created before a Direct Debit (contract) record can\nbe created to collect payments. There can be multiple Direct Debits\n(contracts) attached to a customer record.\n**Important: You are required to perform a modulus check on bank account numbers\nand sort codes before they are passed to the API. We can offer a bank\nchecking API on a pay-per-use basis – please contact our Sales\nDepartment on `01242 650052`for further details on pricing. Failure to\nmodulus check data is likely to cause problems in processing your\npayments. **\n",
+      "name": "Customer Manipulation"
+    },
+    {
+      "description": "A contract record represents the Direct Debit associated with a customer\nrecord. There are two forms of contract record:\n-   **Ad-hoc:** This is where a Direct Debit is created at the bank for\n    the customer, but no payments are requested unless you specifically\n    input payments via the Payments or Bulk Payments API call.\n-   **Scheduled:** In this mode, a schedule for payments is stated at\n    the outset and the system will create the relevant payments in the\n    database approximately five working days before the payments become\n    due. Schedules can usually be weekly or monthly, however the\n    frequencies available will be communicated to you when the API\n    details are provided.\nCustomers can have multiple contracts attached to them in order that\nthey may have multiple payment streams being collected simultaneously.\n",
+      "name": "Contract Querying and Creation"
+    },
+    {
+      "description": "Changing the payment amount or date on a scheduled contract can be\nachieved by using one of the following calls. You will need to select\nthe correct call for the type of contract that you are amending. For\nexample, changing the date on a monthly contract will need a monthly\ncall.\nWe have only shown the responses from one of the calls as all of the\ncalls respond in the same manner. One example of an error is shown,\nhowever you should be prepared to accept different errors and handle\nthem as exceptions during the testing stage.\n",
+      "name": "Contract Amendment"
+    },
+    {
+      "description": "It is important to understand that there are two parts to a contract;\nthe schedule which creates payments and the Direct Debit which collects\nthose payments. By running the following call against the contract, the\nDirect Debit is cancelled which will stop the system from sending\n**scheduled** payments to the bank for collection. They will still be\ncreated within the system, however they will not be sent to the bank and\nwill contribute to customer arrears.\n**NOTE:** This function will **not** affect ad-hoc payments which will\nbe sent regardless of the direct debit status. To prevent ad-hoc\npayments from being sent to the bank, they must *be deleted\nindividually*.\n",
+      "name": "Cancelling the Direct Debit (Does not cancel payment creation)"
+    },
+    {
+      "description": "Archiving a contract achieves four things:\n- It cancels the direct debit.\n- Writes off any arrears that is outstanding on the contract.\n- Cancels any future scheduled payments (it does not cancel ad-hoc\n  payments).\n- Sets the contract status to “archived”.\n",
+      "name": "Archiving a Contract"
+    },
+    {
+      "description": "Reactivating a Direct Debit takes a contract that is in the cancelled\nstate and changes it to “Pending to Activate”. This sends a new\ninstruction to the bank to re-set up the direct debit. A “new 0N” charge\nwill be made for reactivating a direct debit.\n",
+      "name": "Reactivating a Direct Debit"
+    },
+    {
+      "description": "Restarting a contract is fundamentally different to reactivating a\ncontract as it can only be performed if two criteria have been met:\n- The original contract was a fixed term contract which has “Expire”\n  as its “atTheEnd” parameter.\n- The payment schedule has come to a natural end **and** the contract\n  status has changed to “Expired”.\nThis call adds a new contract onto the end of the previous contract, in\neffect “recycling” the previous direct debit at the bank which can save\non direct debit set up charges.\nThis call cannot be used unless both of the two criteria above have been\nmet, otherwise unexpected results may occur.\n",
+      "name": "Restart a Contract"
+    },
+    {
+      "name": "Adding/Querying Payments"
+    },
+    {
+      "name": "Bulk Adding Payments"
+    },
+    {
+      "name": "Payment Manipulation"
+    },
+    {
+      "name": "Obtaining Available Schedules"
+    },
+    {
+      "description": "If you have provided us with a return endpoint using the `Return\nEndpoint` call, data will be posted back to you either in XML or JSON as\nrequired. The default is JSON – if you need XML return information,\nplease let us know.\n### Object Change Return Information\n#### Example JSON Payload\nThis is for an ADDACS change – where a customer has cancelled their\nDirect Debit with the bank.\n```json\n{\n  \"NewStatus\": \"Cancelled\",\n  \"Id\": \"ac190e35-2fa7-162c-8505-18702c186a43\",\n  \"ChangeDate\": \"2017-05-09T10:20:10\",\n  \"Entity\": \"contract\",\n  \"ChangeType\": \"BACS\",\n  \"Source\": \"ADDACS\",\n  \"ReportCode\": \"1\",\n  \"ReportMessage\": \"Contract Cancelled because of ADDACS code 1 (Instruction Cancelled)\",\n  \"Comment\": \"Auto-updated by BACS file\"\n}\n```\n#### Example XML Payload\nThis is for an ARUDD change when a customer’s payment has been returned\nunpaid by the bank.\n```xml\n<root>\n    <NewStatus>Unpaid</NewStatus>\n    <Id>f6dc0f34-1a71-4493-a0af-2f0993f36dc5</Id>\n    <ChangeDate>2017-05-09T12:17:50</ChangeDate>\n    <Entity>payment</Entity>\n    <ChangeType>BACS</ChangeType>\n    <Source>ARUDD</Source>\n    <ReportCode>0</ReportCode>\n    <ReportMessage>The payment marked as 'Unpaid' because of ARUDD code 0 (Refer to Payer)</ReportMessage>\n    <Comment>Auto-updated by BACS file</Comment>\n</root>\n```\n#### Output Parameters:\n| **Parameter** | **Description**\n| ------------- | ---------------\n| AccountName | If the Entity type is customer, the customers name as it appears on their bank account.\n| AccountNumber | If the Entity type is customer, the customers bank account number.\n| SortCode | If the Entity type is customer, the bank sort code of the customer.\n| NewStatus | This is the new status of the object. For payments, this can be:<br>Represented<br>Pending<br>Paid<br>Unpaid<br>Withdrawn<br>Indemnity Claimed<br><br>For contracts:<br>Expired<br>Cancelled<br>Pause<br>Suspended<br>Cancellation Pending<br>Active<br>Creation Pending<br>\n| Id | The GUID of the object being reported on.\n| ChangeDate | The date/time that the change took place.\n| Entity | The entity type: either payment, contract or customer.\n| ChangeType | BACS or Manual depending on how the change came about.\n| Source | ADDACS, ARUDD, DDIC or Manual depending on the source if the change.\n| ReportCode | If the change came from a BACS report (ADDACS, ARUDD or DDIC) the reason code will appear in this field. It will be null in the case of a manual change.\n| ReportMessage | Plain text explanation of the change. We recommend this is logged at your end for reference.\n| Comment | If any comment was input by a user during a manual change, it will appear here.\n\n### Bulk Payment Insert Return Information\n#### Example XML Payload\n```xml\n<root>\n    <Contract>07024c7a-c31c-46c1-8e0e-8fcff640b35c</Contract>\n    <Amount>15.99</Amount>\n    <DueDate>2017-06-01T00:00:00</DueDate>\n    <Id>1522c59f-87dc-4b31-9931-a6083776f670</Id>\n    <Error />\n    <Message />\n</root>\n```\n#### Example JSON Payload\n```json\n{\n  \"Contract\":\"07024c7a-c31c-46c1-8e0e-8fcff640b35c\",\n  \"Amount\":15.99,\n  \"DueDate\":\"2017-06-01T00:00:00\",\n  \"Id\":\"23bc8558-51cd-4c4e-b223-260010c69d38\",\n  \"Error\":null,\n  \"Message\":null\n}\n```\n#### Output Parameters:\n| Parameter | Description\n| --------- | -----------\n| Contract  | The Contract GUID that the payment has been added to.\n| Amount    | The amount of the payment.\n| DueDate   | The due date of the payment.\n| Id        | The payment GUID that you should keep a record of.\n| Error     | Any validation errors will appear here.\n| Message   | Any validation messages or warnings will appear here.\n",
+      "name": "Return endpoints"
+    }
+  ],
+  "x-components": {}
+}
